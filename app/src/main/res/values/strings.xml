@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Abu Zahra Control</string>
+
+    <!-- Auth -->
+    <string name="login">تسجيل الدخول</string>
+    <string name="register">إنشاء حساب</string>
+    <string name="email">البريد الإلكتروني</string>
+    <string name="password">كلمة المرور</string>
+    <string name="confirm_password">تأكيد كلمة المرور</string>
+    <string name="forgot_password">نسيت كلمة المرور؟</string>
+    <string name="no_account">ليس لديك حساب؟</string>
+    <string name="have_account">لديك حساب بالفعل؟</string>
+    <string name="sign_up">تسجيل</string>
+    <string name="sign_in">دخول</string>
+    <string name="login_with_google">تسجيل الدخول بحساب Google</string>
+    <string name="or_continue_with">أو تابع باستخدام</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard">لوحة التحكم</string>
+    <string name="devices">الأجهزة</string>
+    <string name="linked_devices">الأجهزة المرتبطة</string>
+    <string name="no_devices">لا توجد أجهزة مرتبطة</string>
+    <string name="link_device">ربط جهاز</string>
+    <string name="device_status">حالة الجهاز</string>
+    <string name="online">متصل</string>
+    <string name="offline">غير متصل</string>
+    <string name="last_seen">آخر ظهور</string>
+
+    <!-- Control -->
+    <string name="control">التحكم</string>
+    <string name="phone_control">تحكم الهاتف</string>
+    <string name="ring">تشغيل الرنين</string>
+    <string name="vibrate">اهتزاز</string>
+    <string name="screenshot">لقطة شاشة</string>
+    <string name="camera_front">الكاميرا الأمامية</string>
+    <string name="camera_back">الكاميرا الخلفية</string>
+    <string name="lock_phone">قفل الهاتف</string>
+    <string name="get_location">الموقع</string>
+    <string name="get_info">معلومات الجهاز</string>
+    <string name="get_battery">البطارية</string>
+    <string name="reboot">إعادة تشغيل</string>
+    <string name="send_sms">إرسال رسالة</string>
+    <string name="make_call">إجراء مكالمة</string>
+    <string name="show_notification">إشعار تجريبي</string>
+    <string name="speak">نطق نص</string>
+    <string name="play_sound">تشغيل صوت</string>
+    <string name="flashlight">المصباح</string>
+    <string name="open_url">فتح رابط</string>
+    <string name="open_app">فتح تطبيق</string>
+
+    <!-- SMS & Calls -->
+    <string name="sms_calls">الرسائل والمكالمات</string>
+    <string name="get_sms">الرسائل</string>
+    <string name="get_calls">سجل المكالمات</string>
+    <string name="get_contacts">جهات الاتصال</string>
+    <string name="notifications">الإشعارات</string>
+    <string name="clipboard">الحافظة</string>
+
+    <!-- Files -->
+    <string name="files">الملفات</string>
+    <string name="list_files">تصفح الملفات</string>
+    <string name="get_gallery">الصور</string>
+    <string name="search_files">بحث في الملفات</string>
+    <string name="recent_files">الملفات الأخيرة</string>
+
+    <!-- Social -->
+    <string name="social">التطبيقات الاجتماعية</string>
+    <string name="whatsapp">واتساب</string>
+    <string name="telegram">تليجرام</string>
+    <string name="instagram">إنستجرام</string>
+    <string name="messenger">ماسنجر</string>
+    <string name="snapchat">سناب شات</string>
+    <string name="tiktok">تيك توك</string>
+    <string name="twitter">تويتر</string>
+    <string name="viber">فايبر</string>
+    <string name="signal">سيجنال</string>
+    <string name="facebook">فيسبوك</string>
+
+    <!-- Settings -->
+    <string name="settings">الإعدادات</string>
+    <string name="logout">تسجيل الخروج</string>
+    <string name="account">الحساب</string>
+    <string name="language">اللغة</string>
+    <string name="theme">المظهر</string>
+    <string name="about">حول التطبيق</string>
+    <string name="version">الإصدار</string>
+
+    <!-- Device Link -->
+    <string name="link_code">كود الربط</string>
+    <string name="enter_link_code">أدخل كود الربط</string>
+    <string name="generate_code">توليد كود</string>
+    <string name="link_success">تم ربط الجهاز بنجاح</string>
+    <string name="link_failed">فشل الربط - الكود غير صحيح</string>
+    <string name="code_expired">انتهت صلاحية الكود</string>
+
+    <!-- Common -->
+    <string name="loading">جاري التحميل...</string>
+    <string name="error">خطأ</string>
+    <string name="success">تم بنجاح</string>
+    <string name="cancel">إلغاء</string>
+    <string name="ok">موافق</string>
+    <string name="confirm">تأكيد</string>
+    <string name="save">حفظ</string>
+    <string name="delete">حذف</string>
+    <string name="copy">نسخ</string>
+    <string name="share">مشاركة</string>
+    <string name="send">إرسال</string>
+    <string name="command_sent">تم إرسال الأمر</string>
+    <string name="waiting_result">بانتظار النتيجة...</string>
+    <string name="no_results">لا توجد نتائج</string>
+
+    <!-- Categories -->
+    <string name="cat_device">جهاز</string>
+    <string name="cat_camera">كاميرا</string>
+    <string name="cat_media">وسائط</string>
+    <string name="cat_network">شبكة</string>
+    <string name="cat_apps">تطبيقات</string>
+
+    <string name="wifi_on">تشغيل WiFi</string>
+    <string name="wifi_off">إيقاف WiFi</string>
+    <string name="bluetooth_on">تشغيل البلوتوث</string>
+    <string name="bluetooth_off">إيقاف البلوتوث</string>
+    <string name="airplane_on">وضع الطيران</string>
+    <string name="airplane_off">إلغاء الطيران</string>
+    <string name="get_apps">التطبيقات</string>
+    <string name="get_running">المشتغل</string>
+    <string name="get_wifi">معلومات WiFi</string>
+    <string name="get_storage">التخزين</string>
+    <string name="get_sim">معلومات SIM</string>
+    <string name="get_calendar">التقويم</string>
+
+    <!-- Google Sign-In (fallback) -->
+    <string name="default_web_client_id" translatable="false">7073076148-abcdef.apps.googleusercontent.com</string>
+</resources>
