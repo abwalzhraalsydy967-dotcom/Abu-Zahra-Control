@@ -75,7 +75,7 @@ class DashboardFragment : Fragment() {
                         binding.rvDevices.visibility = View.VISIBLE
                         
                         // Update welcome
-                        val userEmail = FirebaseService.currentUser?.email ?: "المدير"
+                        val userEmail = FirebaseService.currentUserEmail ?: "المدير"
                         binding.tvWelcome.text = "مرحباً، ${userEmail.split("@").first()}"
                         
                         // Auto-select first device if none selected

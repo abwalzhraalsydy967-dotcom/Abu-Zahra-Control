@@ -13,8 +13,7 @@ class SplashActivity : AppCompatActivity() {
         setContentView(R.layout.activity_splash)
         
         Handler(Looper.getMainLooper()).postDelayed({
-            val user = FirebaseService.currentUser
-            if (user != null) {
+            if (FirebaseService.isLoggedIn) {
                 startActivity(Intent(this, MainActivity::class.java))
             } else {
                 startActivity(Intent(this, LoginActivity::class.java))

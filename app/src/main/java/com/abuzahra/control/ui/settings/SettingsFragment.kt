@@ -26,15 +26,15 @@ class SettingsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
-        binding.tvEmail.text = FirebaseService.currentUser?.email ?: "غير مسجل"
-        binding.tvUid.text = "UID: ${FirebaseService.currentUser?.uid?.take(16) ?: "N/A"}..."
+        binding.tvEmail.text = FirebaseService.currentUserEmail ?: "غير مسجل"
+        binding.tvUid.text = "ID: ${FirebaseService.currentUserId ?: "N/A"}"
         
         binding.btnLinkDevice.setOnClickListener {
             startActivity(Intent(requireContext(), DeviceLinkActivity::class.java))
         }
         
         binding.btnAppInfo.setOnClickListener {
-            Toast.makeText(requireContext(), "Abu Zahra Control v1.0\nلوحة التحكم الاحترافية", Toast.LENGTH_LONG).show()
+            Toast.makeText(requireContext(), "Abu Zahra Control v1.1\nلوحة التحكم الاحترافية", Toast.LENGTH_LONG).show()
         }
         
         binding.btnLogout.setOnClickListener {

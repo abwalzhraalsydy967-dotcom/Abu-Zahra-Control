@@ -1,7 +1,7 @@
 package com.abuzahra.control.model
 
 data class Device(
-    val id: String = "",
+    var id: String = "",
     val name: String = "",
     val model: String = "",
     val brand: String = "",
