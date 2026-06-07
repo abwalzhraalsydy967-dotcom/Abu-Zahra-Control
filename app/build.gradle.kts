@@ -11,13 +11,25 @@ android {
         applicationId = "com.abuzahra.control"
         minSdk = 24
         targetSdk = 34
-        versionCode = 2
-        versionName = "1.2"
+        versionCode = 4
+        versionName = "1.4"
+    }
+    signingConfigs {
+        create("release") {
+            storeFile = file("abuzahra-release.jks")
+            storePassword = "abuzahra2024"
+            keyAlias = "abuzahra"
+            keyPassword = "abuzahra2024"
+        }
     }
     buildTypes {
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.getByName("release")
+        }
+        debug {
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {
