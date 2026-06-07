@@ -20,119 +20,243 @@ object FirebaseService {
     private const val TAG = "FirebaseService"
     private const val PREFS_NAME = "abu_zahra_control_prefs"
 
-    val auth: FirebaseAuth = Firebase.auth
-    val database: DatabaseReference = Firebase.database.reference
+    private lateinit var _auth: FirebaseAuth
+    private lateinit var _database: DatabaseReference
+
+    val auth: FirebaseAuth
+        get() {
+            if (!::_auth.isInitialized) {
+                try {
+                    _auth = Firebase.auth
+                } catch (e: Exception) {
+                    Log.e(TAG, "Auth init error: ${e.message}")
+                }
+            }
+            return _auth
+        }
+
+    val database: DatabaseReference
+        get() {
+            if (!::_database.isInitialized) {
+                try {
+                    _database = Firebase.database.reference
+                } catch (e: Exception) {
+                    Log.e(TAG, "Database init error: ${e.message}")
+                }
+            }
+            return _database
+        }
 
     val currentUser: FirebaseUser?
-        get() = auth.currentUser
+        get() = try { auth.currentUser } catch (e: Exception) { Log.e(TAG, "currentUser error: ${e.message}"); null }
 
     val userId: String?
-        get() = currentUser?.uid
+        get() = try { currentUser?.uid } catch (e: Exception) { null }
 
     val userEmail: String?
-        get() = currentUser?.email
+        get() = try { currentUser?.email } catch (e: Exception) { null }
 
     private var prefs: SharedPreferences? = null
 
     fun init(ctx: Context) {
-        prefs = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        try {
+            prefs = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            // Force init auth and database
+            auth.currentUser // trigger lazy init
+            database.child("_ping") // trigger lazy init
+            Log.d(TAG, "FirebaseService initialized. User: ${userEmail ?: "null"}")
+        } catch (e: Exception) {
+            Log.e(TAG, "Init error: ${e.message}")
+        }
     }
 
     fun signIn(email: String, password: String, callback: (Boolean, String?) -> Unit) {
-        auth.signInWithEmailAndPassword(email, password)
-            .addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    Log.d(TAG, "Signed in: ${auth.currentUser?.email}")
-                    callback(true, null)
-                } else {
-                    Log.e(TAG, "SignIn failed: ${task.exception?.message}")
-                    callback(false, task.exception?.message ?: "فشل تسجيل الدخول")
+        try {
+            auth.signInWithEmailAndPassword(email, password)
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        Log.d(TAG, "Signed in: ${auth.currentUser?.email}")
+                        callback(true, null)
+                    } else {
+                        val errMsg = task.exception?.message ?: "فشل تسجيل الدخول"
+                        Log.e(TAG, "SignIn failed: $errMsg")
+                        // Provide Arabic error message
+                        val userMsg = when {
+                            errMsg.contains("INVALID_LOGIN_CREDENTIALS", ignoreCase = true) ||
+                            errMsg.contains("wrong password", ignoreCase = true) ||
+                            errMsg.contains("password is invalid", ignoreCase = true) ->
+                                "البريد أو كلمة المرور غير صحيحة"
+                            errMsg.contains("user not found", ignoreCase = true) ||
+                            errMsg.contains("no user record", ignoreCase = true) ->
+                                "لا يوجد حساب بهذا البريد"
+                            errMsg.contains("too many", ignoreCase = true) ->
+                                "محاولات كثيرة، حاول لاحقاً"
+                            errMsg.contains("network", ignoreCase = true) ->
+                                "خطأ في الاتصال بالإنترنت"
+                            errMsg.contains("invalid api key", ignoreCase = true) ||
+                            errMsg.contains("API key", ignoreCase = true) ->
+                                "خطأ في إعدادات Firebase - تأكد من تفعيل المصادقة في Firebase Console"
+                            else -> "فشل تسجيل الدخول: $errMsg"
+                        }
+                        callback(false, userMsg)
+                    }
                 }
-            }
+                .addOnFailureListener { e ->
+                    Log.e(TAG, "SignIn failure: ${e.message}")
+                    callback(false, "خطأ: ${e.message}")
+                }
+        } catch (e: Exception) {
+            Log.e(TAG, "SignIn exception: ${e.message}")
+            callback(false, "خطأ داخلي: ${e.message}")
+        }
     }
 
     fun signUp(email: String, password: String, callback: (Boolean, String?) -> Unit) {
-        auth.createUserWithEmailAndPassword(email, password)
-            .addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    val uid = auth.currentUser?.uid ?: ""
-                    // Save user profile in RTDB
-                    database.child("users").child(uid).setValue(mapOf(
-                        "email" to email,
-                        "createdAt" to System.currentTimeMillis(),
-                        "role" to "admin"
-                    ))
-                    Log.d(TAG, "Registered: $email")
-                    callback(true, null)
-                } else {
-                    Log.e(TAG, "SignUp failed: ${task.exception?.message}")
-                    callback(false, task.exception?.message ?: "فشل إنشاء الحساب")
+        try {
+            auth.createUserWithEmailAndPassword(email, password)
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        val uid = auth.currentUser?.uid ?: ""
+                        Log.d(TAG, "Registered: $email uid=$uid")
+                        // Save user profile in RTDB (non-blocking)
+                        try {
+                            database.child("users").child(uid).setValue(mapOf(
+                                "email" to email,
+                                "createdAt" to ServerValue.TIMESTAMP,
+                                "role" to "admin"
+                            )).addOnFailureListener { e ->
+                                Log.e(TAG, "Save profile failed: ${e.message}")
+                            }
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Save profile error: ${e.message}")
+                        }
+                        callback(true, null)
+                    } else {
+                        val errMsg = task.exception?.message ?: "فشل إنشاء الحساب"
+                        Log.e(TAG, "SignUp failed: $errMsg")
+                        val userMsg = when {
+                            errMsg.contains("email already in use", ignoreCase = true) ->
+                                "هذا البريد مستخدم بالفعل"
+                            errMsg.contains("weak password", ignoreCase = true) ->
+                                "كلمة المرور ضعيفة"
+                            errMsg.contains("invalid email", ignoreCase = true) ->
+                                "البريد الإلكتروني غير صحيح"
+                            errMsg.contains("network", ignoreCase = true) ->
+                                "خطأ في الاتصال بالإنترنت"
+                            errMsg.contains("invalid api key", ignoreCase = true) ||
+                            errMsg.contains("API key", ignoreCase = true) ->
+                                "خطأ في إعدادات Firebase - تأكد من تفعيل المصادقة في Firebase Console"
+                            else -> "فشل إنشاء الحساب: $errMsg"
+                        }
+                        callback(false, userMsg)
+                    }
                 }
-            }
+                .addOnFailureListener { e ->
+                    Log.e(TAG, "SignUp failure: ${e.message}")
+                    callback(false, "خطأ: ${e.message}")
+                }
+        } catch (e: Exception) {
+            Log.e(TAG, "SignUp exception: ${e.message}")
+            callback(false, "خطأ داخلي: ${e.message}")
+        }
     }
 
     fun signOut() {
-        auth.signOut()
+        try {
+            auth.signOut()
+            Log.d(TAG, "Signed out")
+        } catch (e: Exception) {
+            Log.e(TAG, "SignOut error: ${e.message}")
+        }
     }
 
     fun getDevices(): Flow<List<Device>> = callbackFlow {
-        val uid = userId ?: return@callbackFlow
-        val ref = database.child("users").child(uid).child("devices")
+        try {
+            val uid = userId ?: run { trySend(emptyList()); return@callbackFlow }
+            val ref = database.child("users").child(uid).child("devices")
 
-        val listener = object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                val deviceIds = mutableListOf<String>()
-                for (ds in snapshot.children) {
-                    ds.key?.let { deviceIds.add(it) }
-                }
-                if (deviceIds.isEmpty()) {
-                    trySend(emptyList())
-                    return
-                }
-                // Fetch each device
-                val devices = mutableListOf<Device>()
-                var remaining = deviceIds.size
-                if (remaining == 0) { trySend(devices); return }
+            val listener = object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    try {
+                        val deviceIds = mutableListOf<String>()
+                        for (ds in snapshot.children) {
+                            ds.key?.let { deviceIds.add(it) }
+                        }
+                        if (deviceIds.isEmpty()) {
+                            trySend(emptyList())
+                            return
+                        }
 
-                for (devId in deviceIds) {
-                    database.child("devices").child(devId).get()
-                        .addOnSuccessListener { devSnap ->
-                            val device = devSnap.getValue(Device::class.java)
-                            if (device != null) {
-                                device.id = devId
-                                devices.add(device)
+                        val devices = mutableListOf<Device>()
+                        var remaining = deviceIds.size
+
+                        for (devId in deviceIds) {
+                            try {
+                                database.child("devices").child(devId).get()
+                                    .addOnSuccessListener { devSnap ->
+                                        try {
+                                            val device = devSnap.getValue(Device::class.java)
+                                            if (device != null) {
+                                                device.id = devId
+                                                devices.add(device)
+                                            }
+                                        } catch (e: Exception) {
+                                            Log.e(TAG, "Parse device error: ${e.message}")
+                                        }
+                                        remaining--
+                                        if (remaining == 0) trySend(devices.toList())
+                                    }
+                                    .addOnFailureListener {
+                                        Log.e(TAG, "Fetch device error: ${it.message}")
+                                        remaining--
+                                        if (remaining == 0) trySend(devices.toList())
+                                    }
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Get device error: ${e.message}")
+                                remaining--
+                                if (remaining == 0) trySend(devices.toList())
                             }
-                            remaining--
-                            if (remaining == 0) trySend(devices.toList())
                         }
-                        .addOnFailureListener {
-                            remaining--
-                            if (remaining == 0) trySend(devices.toList())
-                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "onDataChange error: ${e.message}")
+                        trySend(emptyList())
+                    }
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    Log.e(TAG, "getDevices cancelled: ${error.message}")
+                    trySend(emptyList())
                 }
             }
 
-            override fun onCancelled(error: DatabaseError) {
-                Log.e(TAG, "getDevices cancelled: ${error.message}")
-                trySend(emptyList())
-            }
+            ref.addValueEventListener(listener)
+            awaitClose { ref.removeEventListener(listener) }
+        } catch (e: Exception) {
+            Log.e(TAG, "getDevices error: ${e.message}")
+            trySend(emptyList())
         }
-
-        ref.addValueEventListener(listener)
-        awaitClose { ref.removeEventListener(listener) }
     }
 
     fun sendCommand(deviceId: String, command: String, params: String = "", callback: (Boolean) -> Unit) {
-        val data = mapOf(
-            "command" to command,
-            "params" to params,
-            "timestamp" to ServerValue.TIMESTAMP
-        )
-        database.child("devices").child(deviceId).child("command").setValue(data)
-            .addOnCompleteListener { task ->
-                Log.d(TAG, "Command $command -> $deviceId: ${task.isSuccessful}")
-                callback(task.isSuccessful)
-            }
+        try {
+            val data = mapOf(
+                "command" to command,
+                "params" to params,
+                "timestamp" to ServerValue.TIMESTAMP
+            )
+            database.child("devices").child(deviceId).child("command").setValue(data)
+                .addOnCompleteListener { task ->
+                    Log.d(TAG, "Command $command -> $deviceId: ${task.isSuccessful}")
+                    callback(task.isSuccessful)
+                }
+                .addOnFailureListener { e ->
+                    Log.e(TAG, "Command failed: ${e.message}")
+                    callback(false)
+                }
+        } catch (e: Exception) {
+            Log.e(TAG, "sendCommand error: ${e.message}")
+            callback(false)
+        }
     }
 
     fun listenForResult(deviceId: String, callback: (CommandResult) -> Unit): ValueEventListener {
@@ -145,44 +269,71 @@ object FirebaseService {
                         callback(result)
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error parsing result: ${e.message}")
+                    Log.e(TAG, "Parse result error: ${e.message}")
                 }
             }
             override fun onCancelled(error: DatabaseError) {
-                Log.e(TAG, "listenForResult: ${error.message}")
+                Log.e(TAG, "listenForResult cancelled: ${error.message}")
             }
         }
-        ref.addValueEventListener(listener)
+        try {
+            ref.addValueEventListener(listener)
+        } catch (e: Exception) {
+            Log.e(TAG, "listenForResult error: ${e.message}")
+        }
         return listener
     }
 
     fun removeResultListener(deviceId: String, listener: ValueEventListener) {
-        database.child("devices").child(deviceId).child("result").removeEventListener(listener)
+        try {
+            database.child("devices").child(deviceId).child("result").removeEventListener(listener)
+        } catch (e: Exception) {
+            Log.e(TAG, "removeResultListener error: ${e.message}")
+        }
     }
 
     fun linkDevice(code: String, callback: (Boolean, String?) -> Unit) {
-        val uid = userId ?: return callback(false, "لم يتم تسجيل الدخول")
-        database.child("linkCodes").child(code).get()
-            .addOnSuccessListener { snapshot ->
-                if (!snapshot.exists()) {
-                    callback(false, "الكود غير صحيح")
-                    return@addOnSuccessListener
-                }
-                val data = snapshot.value as? Map<*, *> ?: run { callback(false, "خطأ في البيانات"); return@addOnSuccessListener }
-                val used = data["used"] as? Boolean ?: false
-                if (used) { callback(false, "الكود مستخدم"); return@addOnSuccessListener }
+        try {
+            val uid = userId ?: return callback(false, "لم يتم تسجيل الدخول")
+            database.child("linkCodes").child(code).get()
+                .addOnSuccessListener { snapshot ->
+                    try {
+                        if (!snapshot.exists()) {
+                            callback(false, "الكود غير صحيح")
+                            return@addOnSuccessListener
+                        }
+                        val data = snapshot.value as? Map<*, *> ?: run {
+                            callback(false, "خطأ في البيانات")
+                            return@addOnSuccessListener
+                        }
+                        val used = data["used"] as? Boolean ?: false
+                        if (used) {
+                            callback(false, "الكود مستخدم")
+                            return@addOnSuccessListener
+                        }
 
-                val expiresAt = data["expiresAt"] as? Long ?: 0
-                if (System.currentTimeMillis() > expiresAt) { callback(false, "الكود منتهي"); return@addOnSuccessListener }
+                        val expiresAt = data["expiresAt"] as? Long ?: 0
+                        if (System.currentTimeMillis() > expiresAt) {
+                            callback(false, "الكود منتهي")
+                            return@addOnSuccessListener
+                        }
 
-                database.child("linkCodes").child(code).child("used").setValue(true)
-                val deviceId = data["deviceId"] as? String ?: ""
-                if (deviceId.isNotEmpty()) {
-                    database.child("users").child(uid).child("devices").child(deviceId).setValue(true)
-                    database.child("devices").child(deviceId).child("linked").setValue(true)
+                        val deviceId = data["deviceId"] as? String ?: ""
+                        database.child("linkCodes").child(code).child("used").setValue(true)
+                        if (deviceId.isNotEmpty()) {
+                            database.child("users").child(uid).child("devices").child(deviceId).setValue(true)
+                            database.child("devices").child(deviceId).child("linked").setValue(true)
+                        }
+                        callback(true, "تم ربط الجهاز بنجاح!")
+                    } catch (e: Exception) {
+                        callback(false, "خطأ: ${e.message}")
+                    }
                 }
-                callback(true, "تم ربط الجهاز بنجاح!")
-            }
-            .addOnFailureListener { e -> callback(false, "خطأ: ${e.message}") }
+                .addOnFailureListener { e ->
+                    callback(false, "خطأ: ${e.message}")
+                }
+        } catch (e: Exception) {
+            callback(false, "خطأ داخلي: ${e.message}")
+        }
     }
 }

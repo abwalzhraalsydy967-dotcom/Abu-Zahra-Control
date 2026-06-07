@@ -1,0 +1,4 @@
+---
+# Build artifacts
+app/build/
+.gradle/
