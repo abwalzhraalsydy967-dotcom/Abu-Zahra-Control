@@ -3,9 +3,11 @@ package com.abuzahra.control
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.widget.Button
+import android.widget.EditText
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.abuzahra.control.databinding.ActivityLoginBinding
 import com.abuzahra.control.service.FirebaseService
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
@@ -13,23 +15,34 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.auth.FirebaseAuth
 
 class LoginActivity : AppCompatActivity() {
-    private var binding: ActivityLoginBinding? = null
-    private val b get() = binding!!
     private var googleClient: GoogleSignInClient? = null
     private val RC_GOOGLE = 9001
+
+    private lateinit var etEmail: EditText
+    private lateinit var etPassword: EditText
+    private lateinit var btnLogin: Button
+    private lateinit var tvForgotPassword: TextView
+    private lateinit var tvGoRegister: TextView
+    private lateinit var btnGoogleSignIn: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         try {
-            binding = ActivityLoginBinding.inflate(layoutInflater)
-            setContentView(b.root)
+            setContentView(R.layout.activity_login)
+            etEmail = findViewById(R.id.etEmail)
+            etPassword = findViewById(R.id.etPassword)
+            btnLogin = findViewById(R.id.btnLogin)
+            tvForgotPassword = findViewById(R.id.tvForgotPassword)
+            tvGoRegister = findViewById(R.id.tvGoRegister)
+            btnGoogleSignIn = findViewById(R.id.btnGoogleSignIn)
         } catch (e: Exception) {
-            Log.e("Login", "Binding error: ${e.message}")
+            Log.e("Login", "Setup error: ${e.message}")
+            e.printStackTrace()
             finish()
             return
         }
 
-        // Setup Google Sign-In (optional - won't crash if fails)
+        // Google Sign-In
         try {
             val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestIdToken("787676787951-20uf0a81hb0n5b95t9htb7cd073lu2bm.apps.googleusercontent.com")
@@ -41,35 +54,30 @@ class LoginActivity : AppCompatActivity() {
         }
 
         try {
-            b.btnLogin.setOnClickListener { doLogin() }
-            b.tvForgotPassword.setOnClickListener { doReset() }
-            b.tvGoRegister.setOnClickListener {
-                startActivity(Intent(this, RegisterActivity::class.java))
-            }
-            b.btnGoogleSignIn.setOnClickListener { doGoogleSignIn() }
-        } catch (e: Exception) {
-            Log.e("Login", "UI setup error: ${e.message}")
-        }
+            btnLogin.setOnClickListener { doLogin() }
+            tvForgotPassword.setOnClickListener { doReset() }
+            tvGoRegister.setOnClickListener { startActivity(Intent(this, RegisterActivity::class.java)) }
+            btnGoogleSignIn.setOnClickListener { doGoogleSignIn() }
+        } catch (e: Exception) { Log.e("Login", "UI setup: ${e.message}") }
     }
 
     private fun doLogin() {
         try {
-            val email = b.etEmail.text.toString().trim()
-            val pass = b.etPassword.text.toString().trim()
+            val email = etEmail.text.toString().trim()
+            val pass = etPassword.text.toString().trim()
             if (email.isEmpty() || pass.isEmpty()) {
                 Toast.makeText(this, "أدخل البريد وكلمة المرور", Toast.LENGTH_SHORT).show()
                 return
             }
-            b.btnLogin.isEnabled = false
-            b.btnLogin.text = "جاري التحميل..."
+            btnLogin.isEnabled = false
+            btnLogin.text = "جاري التحميل..."
 
             FirebaseService.signIn(email, pass) { ok, err ->
                 runOnUiThread {
                     try {
-                        b.btnLogin.isEnabled = true
-                        b.btnLogin.text = "دخول"
+                        btnLogin.isEnabled = true
+                        btnLogin.text = "دخول"
                     } catch (_: Exception) {}
-
                     if (ok) {
                         Toast.makeText(this, "تم تسجيل الدخول ✅", Toast.LENGTH_SHORT).show()
                         goToMain()
@@ -79,7 +87,7 @@ class LoginActivity : AppCompatActivity() {
                 }
             }
         } catch (e: Exception) {
-            Log.e("Login", "doLogin error: ${e.message}")
+            Log.e("Login", "doLogin: ${e.message}")
             Toast.makeText(this, "خطأ: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
@@ -87,14 +95,9 @@ class LoginActivity : AppCompatActivity() {
     private fun doGoogleSignIn() {
         try {
             val client = googleClient
-            if (client != null) {
-                startActivityForResult(client.signInIntent, RC_GOOGLE)
-            } else {
-                Toast.makeText(this, "تسجيل Google غير متاح - استخدم البريد وكلمة المرور", Toast.LENGTH_LONG).show()
-            }
-        } catch (e: Exception) {
-            Toast.makeText(this, "تأكد من تثبيت خدمات Google Play", Toast.LENGTH_LONG).show()
-        }
+            if (client != null) startActivityForResult(client.signInIntent, RC_GOOGLE)
+            else Toast.makeText(this, "تسجيل Google غير متاح - استخدم البريد وكلمة المرور", Toast.LENGTH_LONG).show()
+        } catch (e: Exception) { Toast.makeText(this, "تأكد من تثبيت خدمات Google Play", Toast.LENGTH_LONG).show() }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -110,31 +113,23 @@ class LoginActivity : AppCompatActivity() {
                             Toast.makeText(this, "تم تسجيل الدخول ✅", Toast.LENGTH_SHORT).show()
                             goToMain()
                         } else {
-                            val err = t.exception?.message ?: "فشل"
-                            Toast.makeText(this, "فشل: $err", Toast.LENGTH_LONG).show()
+                            Toast.makeText(this, "فشل: ${t.exception?.message}", Toast.LENGTH_LONG).show()
                         }
                     }
-            } catch (e: Exception) {
-                Toast.makeText(this, "فشل تسجيل الدخول بـ Google", Toast.LENGTH_SHORT).show()
-            }
+            } catch (e: Exception) { Toast.makeText(this, "فشل تسجيل الدخول بـ Google", Toast.LENGTH_SHORT).show() }
         }
     }
 
     private fun doReset() {
         try {
-            val email = b.etEmail.text.toString().trim()
-            if (email.isEmpty()) {
-                Toast.makeText(this, "أدخل بريدك أولاً", Toast.LENGTH_SHORT).show()
-                return
-            }
+            val email = etEmail.text.toString().trim()
+            if (email.isEmpty()) { Toast.makeText(this, "أدخل بريدك أولاً", Toast.LENGTH_SHORT).show(); return }
             FirebaseAuth.getInstance().sendPasswordResetEmail(email)
                 .addOnCompleteListener { t ->
                     val msg = if (t.isSuccessful) "تم إرسال رابط إعادة التعيين" else "فشل: ${t.exception?.message}"
                     Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
                 }
-        } catch (e: Exception) {
-            Toast.makeText(this, "خطأ: ${e.message}", Toast.LENGTH_SHORT).show()
-        }
+        } catch (e: Exception) { Toast.makeText(this, "خطأ: ${e.message}", Toast.LENGTH_SHORT).show() }
     }
 
     private fun goToMain() {
@@ -144,13 +139,8 @@ class LoginActivity : AppCompatActivity() {
             startActivity(intent)
             finish()
         } catch (e: Exception) {
-            Log.e("Login", "goToMain error: ${e.message}")
+            Log.e("Login", "goToMain: ${e.message}")
             Toast.makeText(this, "خطأ في فتح الصفحة الرئيسية: ${e.message}", Toast.LENGTH_LONG).show()
         }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        binding = null
     }
 }

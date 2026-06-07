@@ -1,22 +1,20 @@
 package com.abuzahra.control.ui.control
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.util.Log
+import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.abuzahra.control.MainActivity
 import com.abuzahra.control.R
 import com.abuzahra.control.adapter.ActionAdapter
 import com.abuzahra.control.adapter.ActionItem
-import com.abuzahra.control.databinding.FragmentGenericBinding
 
 class ControlFragment : Fragment() {
-    private var _b: FragmentGenericBinding? = null
-    private val b get() = _b!!
-
     private val actions = listOf(
         ActionItem("📡", "معلومات الجهاز", "get_info"),
         ActionItem("🔋", "البطارية", "get_battery"),
@@ -49,23 +47,19 @@ class ControlFragment : Fragment() {
     )
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return try {
-            _b = FragmentGenericBinding.inflate(inflater, container, false)
-            b.root
-        } catch (e: Exception) {
-            Log.e("Control", "Error: ${e.message}")
-            null
-        }
+        return inflater.inflate(R.layout.fragment_generic, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        if (_b == null) return
-        b.tvSectionTitle.text = "⚙️ التحكم بالجهاز"
-        b.rvActions.layoutManager = LinearLayoutManager(requireContext())
-        b.rvActions.adapter = ActionAdapter(actions) { a ->
-            (activity as? MainActivity)?.sendCommand(a.command, a.params)
-        }
+        super.onViewCreated(view, savedInstanceState)
+        try {
+            val tvSectionTitle: TextView = view.findViewById(R.id.tvSectionTitle)
+            val rvActions: RecyclerView = view.findViewById(R.id.rvActions)
+            tvSectionTitle.text = "⚙️ التحكم بالجهاز"
+            rvActions.layoutManager = LinearLayoutManager(requireContext())
+            rvActions.adapter = ActionAdapter(actions) { a ->
+                (activity as? MainActivity)?.sendCommand(a.command, a.params)
+            }
+        } catch (e: Exception) { Log.e("Control", "onViewCreated: ${e.message}") }
     }
-
-    override fun onDestroyView() { super.onDestroyView(); _b = null }
 }

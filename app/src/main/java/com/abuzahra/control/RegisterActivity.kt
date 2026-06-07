@@ -3,9 +3,11 @@ package com.abuzahra.control
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.widget.Button
+import android.widget.EditText
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.abuzahra.control.databinding.ActivityRegisterBinding
 import com.abuzahra.control.service.FirebaseService
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
@@ -13,18 +15,29 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.auth.FirebaseAuth
 
 class RegisterActivity : AppCompatActivity() {
-    private var binding: ActivityRegisterBinding? = null
-    private val b get() = binding!!
     private var googleClient: GoogleSignInClient? = null
     private val RC_GOOGLE = 9001
+
+    private lateinit var etEmail: EditText
+    private lateinit var etPassword: EditText
+    private lateinit var etConfirmPassword: EditText
+    private lateinit var btnRegister: Button
+    private lateinit var tvGoLogin: TextView
+    private lateinit var btnGoogleSignIn: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         try {
-            binding = ActivityRegisterBinding.inflate(layoutInflater)
-            setContentView(b.root)
+            setContentView(R.layout.activity_register)
+            etEmail = findViewById(R.id.etEmail)
+            etPassword = findViewById(R.id.etPassword)
+            etConfirmPassword = findViewById(R.id.etConfirmPassword)
+            btnRegister = findViewById(R.id.btnRegister)
+            tvGoLogin = findViewById(R.id.tvGoLogin)
+            btnGoogleSignIn = findViewById(R.id.btnGoogleSignIn)
         } catch (e: Exception) {
-            Log.e("Register", "Binding error: ${e.message}")
+            Log.e("Register", "Setup error: ${e.message}")
+            e.printStackTrace()
             finish()
             return
         }
@@ -34,62 +47,36 @@ class RegisterActivity : AppCompatActivity() {
                 .requestIdToken("787676787951-20uf0a81hb0n5b95t9htb7cd073lu2bm.apps.googleusercontent.com")
                 .requestEmail().build()
             googleClient = GoogleSignIn.getClient(this, gso)
-        } catch (e: Exception) {
-            Log.w("Register", "Google Sign-In not available: ${e.message}")
-        }
+        } catch (e: Exception) { Log.w("Register", "Google SI: ${e.message}") }
 
         try {
-            b.btnRegister.setOnClickListener { doRegister() }
-            b.tvGoLogin.setOnClickListener {
-                startActivity(Intent(this, LoginActivity::class.java))
-                finish()
-            }
-            b.btnGoogleSignIn.setOnClickListener {
+            btnRegister.setOnClickListener { doRegister() }
+            tvGoLogin.setOnClickListener { startActivity(Intent(this, LoginActivity::class.java)); finish() }
+            btnGoogleSignIn.setOnClickListener {
                 try {
                     googleClient?.let { startActivityForResult(it.signInIntent, RC_GOOGLE) }
                         ?: Toast.makeText(this, "تسجيل Google غير متاح", Toast.LENGTH_SHORT).show()
-                } catch (e: Exception) {
-                    Toast.makeText(this, "تأكد من خدمات Google", Toast.LENGTH_SHORT).show()
-                }
+                } catch (e: Exception) { Toast.makeText(this, "تأكد من خدمات Google", Toast.LENGTH_SHORT).show() }
             }
-        } catch (e: Exception) {
-            Log.e("Register", "UI setup error: ${e.message}")
-        }
+        } catch (e: Exception) { Log.e("Register", "UI: ${e.message}") }
     }
 
     private fun doRegister() {
         try {
-            val email = b.etEmail.text.toString().trim()
-            val pass = b.etPassword.text.toString()
-            val confirm = b.etConfirmPassword.text.toString()
+            val email = etEmail.text.toString().trim()
+            val pass = etPassword.text.toString()
+            val confirm = etConfirmPassword.text.toString()
+            if (email.isEmpty() || pass.isEmpty()) { Toast.makeText(this, "أكمل الحقول", Toast.LENGTH_SHORT).show(); return }
+            if (!email.contains("@") || !email.contains(".")) { Toast.makeText(this, "بريد غير صحيح", Toast.LENGTH_SHORT).show(); return }
+            if (pass != confirm) { Toast.makeText(this, "كلمتا المرور غير متطابقتين", Toast.LENGTH_SHORT).show(); return }
+            if (pass.length < 6) { Toast.makeText(this, "كلمة المرور 6 أحرف على الأقل", Toast.LENGTH_SHORT).show(); return }
 
-            if (email.isEmpty() || pass.isEmpty()) {
-                Toast.makeText(this, "أكمل الحقول", Toast.LENGTH_SHORT).show()
-                return
-            }
-            if (!email.contains("@") || !email.contains(".")) {
-                Toast.makeText(this, "بريد غير صحيح", Toast.LENGTH_SHORT).show()
-                return
-            }
-            if (pass != confirm) {
-                Toast.makeText(this, "كلمتا المرور غير متطابقتين", Toast.LENGTH_SHORT).show()
-                return
-            }
-            if (pass.length < 6) {
-                Toast.makeText(this, "كلمة المرور 6 أحرف على الأقل", Toast.LENGTH_SHORT).show()
-                return
-            }
-
-            b.btnRegister.isEnabled = false
-            b.btnRegister.text = "جاري التحميل..."
+            btnRegister.isEnabled = false
+            btnRegister.text = "جاري التحميل..."
 
             FirebaseService.signUp(email, pass) { ok, err ->
                 runOnUiThread {
-                    try {
-                        b.btnRegister.isEnabled = true
-                        b.btnRegister.text = "تسجيل"
-                    } catch (_: Exception) {}
-
+                    try { btnRegister.isEnabled = true; btnRegister.text = "تسجيل" } catch (_: Exception) {}
                     if (ok) {
                         Toast.makeText(this, "تم إنشاء الحساب ✅", Toast.LENGTH_SHORT).show()
                         goToMain()
@@ -98,10 +85,7 @@ class RegisterActivity : AppCompatActivity() {
                     }
                 }
             }
-        } catch (e: Exception) {
-            Log.e("Register", "doRegister error: ${e.message}")
-            Toast.makeText(this, "خطأ: ${e.message}", Toast.LENGTH_LONG).show()
-        }
+        } catch (e: Exception) { Log.e("Register", "doRegister: ${e.message}"); Toast.makeText(this, "خطأ: ${e.message}", Toast.LENGTH_LONG).show() }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -113,15 +97,10 @@ class RegisterActivity : AppCompatActivity() {
                 val cred = com.google.firebase.auth.GoogleAuthProvider.getCredential(account.idToken, null)
                 FirebaseAuth.getInstance().signInWithCredential(cred)
                     .addOnCompleteListener { t ->
-                        if (t.isSuccessful) {
-                            goToMain()
-                        } else {
-                            Toast.makeText(this, "فشل: ${t.exception?.message}", Toast.LENGTH_SHORT).show()
-                        }
+                        if (t.isSuccessful) goToMain()
+                        else Toast.makeText(this, "فشل: ${t.exception?.message}", Toast.LENGTH_SHORT).show()
                     }
-            } catch (e: Exception) {
-                Toast.makeText(this, "فشل Google", Toast.LENGTH_SHORT).show()
-            }
+            } catch (e: Exception) { Toast.makeText(this, "فشل Google", Toast.LENGTH_SHORT).show() }
         }
     }
 
@@ -129,16 +108,7 @@ class RegisterActivity : AppCompatActivity() {
         try {
             val intent = Intent(this, MainActivity::class.java)
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            startActivity(intent)
-            finish()
-        } catch (e: Exception) {
-            Log.e("Register", "goToMain error: ${e.message}")
-            Toast.makeText(this, "خطأ: ${e.message}", Toast.LENGTH_LONG).show()
-        }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        binding = null
+            startActivity(intent); finish()
+        } catch (e: Exception) { Log.e("Register", "goToMain: ${e.message}"); Toast.makeText(this, "خطأ: ${e.message}", Toast.LENGTH_LONG).show() }
     }
 }
