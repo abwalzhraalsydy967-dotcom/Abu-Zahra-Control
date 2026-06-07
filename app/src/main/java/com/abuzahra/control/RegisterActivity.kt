@@ -31,7 +31,7 @@ class RegisterActivity : AppCompatActivity() {
 
         try {
             val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken("7073076148-abcdef.apps.googleusercontent.com")
+                .requestIdToken("787676787951-20uf0a81hb0n5b95t9htb7cd073lu2bm.apps.googleusercontent.com")
                 .requestEmail().build()
             googleClient = GoogleSignIn.getClient(this, gso)
         } catch (e: Exception) {

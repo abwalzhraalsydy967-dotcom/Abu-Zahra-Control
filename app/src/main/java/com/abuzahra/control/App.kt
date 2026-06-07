@@ -12,10 +12,9 @@ class App : Application() {
         super.onCreate()
         try {
             // Check if Firebase is already initialized by google-services plugin
-            val existingApp = FirebaseApp.getApps(this)
-            if (existingApp.isNotEmpty()) {
-                Log.d("App", "Firebase already initialized by plugin")
-                // Ensure database URL is correct
+            val existingApps = FirebaseApp.getApps(this)
+            if (existingApps.isNotEmpty()) {
+                Log.d("App", "Firebase already initialized by plugin (${existingApps.size} apps)")
                 try {
                     Firebase.database.setPersistenceEnabled(true)
                 } catch (e: Exception) {
@@ -24,17 +23,18 @@ class App : Application() {
                 return
             }
 
-            // Manual initialization with correct project credentials
+            // Manual initialization with REAL project credentials
             val options = FirebaseOptions.Builder()
-                .setApiKey("91b6cd08b16f5ad4cc62f88674bcff91fb5041e3")
-                .setApplicationId("1:7073076148:android:c0a3e7f9d2b1a4e8")
+                .setApiKey("AIzaSyASBVIQ0AvrsLqAgbT9k6L7bCpZKoqdvjo")
+                .setApplicationId("1:787676787951:android:e583411c93e5c76694171a")
                 .setProjectId("studio-7073076148-6afe0")
                 .setDatabaseUrl("https://studio-7073076148-6afe0-default-rtdb.firebaseio.com")
-                .setStorageBucket("studio-7073076148-6afe0.appspot.com")
+                .setStorageBucket("studio-7073076148-6afe0.firebasestorage.app")
+                .setGcmSenderId("787676787951")
                 .build()
 
             FirebaseApp.initializeApp(this, options)
-            Log.d("App", "Firebase initialized manually")
+            Log.d("App", "Firebase initialized manually with real credentials")
 
             Firebase.database.setPersistenceEnabled(true)
             Log.d("App", "Database persistence enabled")
