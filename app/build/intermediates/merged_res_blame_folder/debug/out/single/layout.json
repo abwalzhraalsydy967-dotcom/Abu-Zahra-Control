@@ -1,0 +1,46 @@
+[
+    {
+        "merged": "/home/z/.gradle/daemon/8.5/com.abuzahra.control.app-mergeDebugResources-45:/layout/fragment_dashboard.xml",
+        "source": "/home/z/.gradle/daemon/8.5/com.abuzahra.control.app-main-48:/layout/fragment_dashboard.xml"
+    },
+    {
+        "merged": "/home/z/.gradle/daemon/8.5/com.abuzahra.control.app-mergeDebugResources-45:/layout/activity_main.xml",
+        "source": "/home/z/.gradle/daemon/8.5/com.abuzahra.control.app-main-48:/layout/activity_main.xml"
+    },
+    {
+        "merged": "com.abuzahra.control.app-mergeDebugResources-45:/layout/item_device.xml",
+        "source": "com.abuzahra.control.app-main-48:/layout/item_device.xml"
+    },
+    {
+        "merged": "/home/z/.gradle/daemon/8.5/com.abuzahra.control.app-mergeDebugResources-45:/layout/activity_device_link.xml",
+        "source": "/home/z/.gradle/daemon/8.5/com.abuzahra.control.app-main-48:/layout/activity_device_link.xml"
+    },
+    {
+        "merged": "/home/z/.gradle/daemon/8.5/com.abuzahra.control.app-mergeDebugResources-45:/layout/activity_login.xml",
+        "source": "/home/z/.gradle/daemon/8.5/com.abuzahra.control.app-main-48:/layout/activity_login.xml"
+    },
+    {
+        "merged": "/home/z/.gradle/daemon/8.5/com.abuzahra.control.app-mergeDebugResources-45:/layout/fragment_generic.xml",
+        "source": "/home/z/.gradle/daemon/8.5/com.abuzahra.control.app-main-48:/layout/fragment_generic.xml"
+    },
+    {
+        "merged": "/home/z/.gradle/daemon/8.5/com.abuzahra.control.app-mergeDebugResources-45:/layout/activity_register.xml",
+        "source": "/home/z/.gradle/daemon/8.5/com.abuzahra.control.app-main-48:/layout/activity_register.xml"
+    },
+    {
+        "merged": "/home/z/.gradle/daemon/8.5/com.abuzahra.control.app-mergeDebugResources-45:/layout/item_action.xml",
+        "source": "/home/z/.gradle/daemon/8.5/com.abuzahra.control.app-main-48:/layout/item_action.xml"
+    },
+    {
+        "merged": "/home/z/.gradle/daemon/8.5/com.abuzahra.control.app-mergeDebugResources-45:/layout/activity_splash.xml",
+        "source": "/home/z/.gradle/daemon/8.5/com.abuzahra.control.app-main-48:/layout/activity_splash.xml"
+    },
+    {
+        "merged": "/home/z/.gradle/daemon/8.5/com.abuzahra.control.app-mergeDebugResources-45:/layout/fragment_settings.xml",
+        "source": "/home/z/.gradle/daemon/8.5/com.abuzahra.control.app-main-48:/layout/fragment_settings.xml"
+    },
+    {
+        "merged": "/home/z/.gradle/daemon/8.5/com.abuzahra.control.app-mergeDebugResources-45:/layout/item_device.xml",
+        "source": "/home/z/.gradle/daemon/8.5/com.abuzahra.control.app-main-48:/layout/item_device.xml"
+    }
+]
