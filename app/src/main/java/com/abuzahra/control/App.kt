@@ -6,15 +6,9 @@ import android.util.Log
 class App : Application() {
     override fun onCreate() {
         super.onCreate()
-        try {
-            val apps = com.google.firebase.FirebaseApp.getApps(this)
-            Log.d("App", "Firebase apps: ${apps.size}")
-            if (apps.isNotEmpty()) {
-                Log.d("App", "Project: ${apps[0].options.projectId}")
-                Log.d("App", "DB URL: ${apps[0].options.databaseUrl}")
-            }
-        } catch (e: Exception) {
-            Log.e("App", "Firebase check: ${e.message}")
-        }
+        // Do NOT access Firebase here - google-services plugin auto-initializes
+        // Firebase via a ContentProvider that runs AFTER Application.onCreate().
+        // Accessing Firebase in Application.onCreate() causes crash.
+        Log.d("App", "App.onCreate() - Application started")
     }
 }

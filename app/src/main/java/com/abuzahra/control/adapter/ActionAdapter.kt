@@ -15,8 +15,8 @@ class ActionAdapter(
 ) : RecyclerView.Adapter<ActionAdapter.VH>() {
 
     class VH(view: View) : RecyclerView.ViewHolder(view) {
-        val tvEmoji: TextView = view.findViewById(R.id.tvEmoji)
-        val tvActionName: TextView = view.findViewById(R.id.tvActionName)
+        val tvEmoji: TextView? = view.findViewById(R.id.tvEmoji)
+        val tvActionName: TextView? = view.findViewById(R.id.tvActionName)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
@@ -26,8 +26,8 @@ class ActionAdapter(
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val action = actions[position]
-        holder.tvEmoji.text = action.emoji
-        holder.tvActionName.text = action.name
+        holder.tvEmoji?.text = action.emoji
+        holder.tvActionName?.text = action.name
         holder.itemView.setOnClickListener { onClick(action) }
     }
 

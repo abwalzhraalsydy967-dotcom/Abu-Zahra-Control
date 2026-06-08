@@ -41,47 +41,63 @@ jobs:
           key: gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: gradle-
 
-      - name: Show SHA1 Fingerprint
+      - name: Generate and Show SHA1 Fingerprint
         id: sha1
         run: |
-          echo "==========================================="
-          echo "   SHA1 FINGERPRINT (Add to Firebase Console)"
-          echo "==========================================="
+          echo "============================================================"
+          echo "  SHA1 FINGERPRINT"
+          echo "  Add this to Firebase Console > Project Settings > Android"
+          echo "============================================================"
           SHA1=$(keytool -list -v -keystore app/abuzahra-release.jks -storepass abuzahra2024 -alias abuzahra 2>&1 | grep SHA1 | awk '{print $2}')
           echo "SHA1=$SHA1"
           echo "SHA1=$SHA1" >> $GITHUB_ENV
           echo "sha1=$SHA1" >> $GITHUB_OUTPUT
-          echo "==========================================="
-          echo "  $SHA1"
-          echo "==========================================="
           echo ""
-          echo "Firebase Console > Project Settings > Your Apps > Android"
-          echo "Add this SHA1 to enable Google Sign-In"
+          echo "============================================================"
+          echo "  SHA1: $SHA1"
+          echo "============================================================"
+          echo ""
+          echo "To enable Google Sign-In:"
+          echo "1. Go to Firebase Console"
+          echo "2. Project Settings > Your Apps > Android"
+          echo "3. Add SHA1: $SHA1"
+
+      - name: Show MD5 and SHA256 too
+        run: |
+          echo "============================================================"
+          echo "  All Fingerprints"
+          echo "============================================================"
+          keytool -list -v -keystore app/abuzahra-release.jks -storepass abuzahra2024 -alias abuzahra 2>&1 | grep -E "SHA1|SHA256|MD5"
+          echo "============================================================"
 
       - name: Verify google-services.json
         run: |
-          echo "==========================================="
-          echo "   Firebase Configuration"
-          echo "==========================================="
-          echo "Project: $(python3 -c 'import json; d=json.load(open("app/google-services.json")); print(d["project_info"]["project_id"])')"
-          echo "DB URL: $(python3 -c 'import json; d=json.load(open("app/google-services.json")); print(d["project_info"]["firebase_url"])')"
-          echo "API Key: $(python3 -c 'import json; d=json.load(open("app/google-services.json")); print(d["client"][0]["api_key"][0]["current_key"])')"
-          echo "Package: $(python3 -c 'import json; d=json.load(open("app/google-services.json")); print(d["client"][0]["client_info"]["android_client_info"]["package_name"])')"
-          echo "==========================================="
+          echo "============================================================"
+          echo "  Firebase Configuration"
+          echo "============================================================"
+          PROJECT=$(python3 -c 'import json; d=json.load(open("app/google-services.json")); print(d["project_info"]["project_id"])')
+          DBURL=$(python3 -c 'import json; d=json.load(open("app/google-services.json")); print(d["project_info"]["firebase_url"])')
+          APIKEY=$(python3 -c 'import json; d=json.load(open("app/google-services.json")); print(d["client"][0]["api_key"][0]["current_key"])')
+          PKG=$(python3 -c 'import json; d=json.load(open("app/google-services.json")); print(d["client"][0]["client_info"]["android_client_info"]["package_name"])')
+          echo "Project: $PROJECT"
+          echo "DB URL: $DBURL"
+          echo "API Key: $APIKEY"
+          echo "Package: $PKG"
+          echo "============================================================"
 
       - name: Grant execute permission
         run: chmod +x gradlew
 
       - name: Build Release APK
         run: |
-          echo "==========================================="
-          echo "   Starting Gradle Build..."
-          echo "==========================================="
+          echo "============================================================"
+          echo "  Starting Gradle Build..."
+          echo "============================================================"
           ./gradlew assembleRelease --stacktrace 2>&1 | tee build-output.txt
           echo ""
-          echo "==========================================="
-          echo "   Build Completed!"
-          echo "==========================================="
+          echo "============================================================"
+          echo "  Build Completed!"
+          echo "============================================================"
 
       - name: Check APK exists
         run: |
@@ -98,8 +114,8 @@ jobs:
         run: |
           VNAME=$(sed -n 's/.*versionName[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' app/build.gradle.kts | head -1)
           VCODE=$(sed -n 's/.*versionCode[[:space:]]*=[[:space:]]*\([0-9]*\).*/\1/p' app/build.gradle.kts | head -1)
-          if [ -z "$VNAME" ]; then VNAME="1.8"; fi
-          if [ -z "$VCODE" ]; then VCODE="8"; fi
+          if [ -z "$VNAME" ]; then VNAME="2.1"; fi
+          if [ -z "$VCODE" ]; then VCODE="10"; fi
           echo "version=$VNAME" >> $GITHUB_OUTPUT
           echo "code=$VCODE" >> $GITHUB_OUTPUT
           echo "Version: $VNAME ($VCODE)"
@@ -129,15 +145,23 @@ jobs:
 
             **Built by GitHub Actions** | Run #${{ github.run_number }}
 
-            ### SHA1 Fingerprint (for Firebase Console)
+            ### SHA1 Fingerprint (Add to Firebase Console for Google Sign-In)
             ```
             ${{ env.SHA1 }}
             ```
 
+            ### How to Enable Google Sign-In
+            1. Go to [Firebase Console](https://console.firebase.google.com)
+            2. Select your project
+            3. Go to Project Settings > Your Apps > Android app
+            4. Click "Add Fingerprint"
+            5. Paste: `${{ env.SHA1 }}`
+            6. Save and rebuild the app
+
             ### Installation
             1. Download `app-release.apk` below
             2. Install on your Android device
-            3. Add SHA1 above to Firebase Console > Settings > Android Apps
+            3. Sign in with email or Google account
 
             ### Build Info
             - Trigger: ${{ github.event_name }}
@@ -151,8 +175,8 @@ jobs:
         run: |
           echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### SHA1 Fingerprint" >> $GITHUB_STEP_SUMMARY
-          echo "`${{ env.SHA1 }}`" >> $GITHUB_STEP_SUMMARY
+          echo "### SHA1 Fingerprint (for Firebase Google Sign-In)" >> $GITHUB_STEP_SUMMARY
+          echo '```${{ env.SHA1 }}```' >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Details" >> $GITHUB_STEP_SUMMARY
           echo "- **Version**: v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY

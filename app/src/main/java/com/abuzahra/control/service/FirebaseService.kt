@@ -17,8 +17,12 @@ import kotlinx.coroutines.flow.callbackFlow
 object FirebaseService {
     private const val TAG = "FirebaseService"
 
-    val auth: FirebaseAuth by lazy { Firebase.auth }
-    val database: DatabaseReference by lazy { Firebase.database.reference }
+    val auth: FirebaseAuth by lazy {
+        try { Firebase.auth } catch (e: Exception) { Log.e(TAG, "auth init: ${e.message}"); FirebaseAuth.getInstance() }
+    }
+    val database: DatabaseReference by lazy {
+        try { Firebase.database.reference } catch (e: Exception) { Log.e(TAG, "database init: ${e.message}"); FirebaseDatabase.getInstance().reference }
+    }
 
     val currentUser get() = try { auth.currentUser } catch (_: Exception) { null }
     val userId get() = try { currentUser?.uid } catch (_: Exception) { null }
@@ -37,39 +41,49 @@ object FirebaseService {
     }
 
     fun signIn(email: String, password: String, callback: (Boolean, String?) -> Unit) {
-        auth.signInWithEmailAndPassword(email, password)
-            .addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    Log.d(TAG, "Signed in: ${currentUser?.email}")
-                    callback(true, null)
-                } else {
-                    val msg = translateError(task.exception?.message ?: "فشل")
-                    Log.e(TAG, "SignIn failed: ${task.exception?.message}")
-                    callback(false, msg)
+        try {
+            auth.signInWithEmailAndPassword(email, password)
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        Log.d(TAG, "Signed in: ${currentUser?.email}")
+                        callback(true, null)
+                    } else {
+                        val msg = translateError(task.exception?.message ?: "فشل")
+                        Log.e(TAG, "SignIn failed: ${task.exception?.message}")
+                        callback(false, msg)
+                    }
                 }
-            }
+        } catch (e: Exception) {
+            Log.e(TAG, "SignIn exception: ${e.message}")
+            callback(false, "خطأ: ${e.message}")
+        }
     }
 
     fun signUp(email: String, password: String, callback: (Boolean, String?) -> Unit) {
-        auth.createUserWithEmailAndPassword(email, password)
-            .addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    val uid = userId ?: ""
-                    Log.d(TAG, "Registered: $email uid=$uid")
-                    try {
-                        database.child("users").child(uid).setValue(mapOf(
-                            "email" to email,
-                            "createdAt" to ServerValue.TIMESTAMP,
-                            "role" to "admin"
-                        ))
-                    } catch (_: Exception) {}
-                    callback(true, null)
-                } else {
-                    val msg = translateError(task.exception?.message ?: "فشل")
-                    Log.e(TAG, "SignUp failed: ${task.exception?.message}")
-                    callback(false, msg)
+        try {
+            auth.createUserWithEmailAndPassword(email, password)
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        val uid = userId ?: ""
+                        Log.d(TAG, "Registered: $email uid=$uid")
+                        try {
+                            database.child("users").child(uid).setValue(mapOf(
+                                "email" to email,
+                                "createdAt" to ServerValue.TIMESTAMP,
+                                "role" to "admin"
+                            ))
+                        } catch (_: Exception) {}
+                        callback(true, null)
+                    } else {
+                        val msg = translateError(task.exception?.message ?: "فشل")
+                        Log.e(TAG, "SignUp failed: ${task.exception?.message}")
+                        callback(false, msg)
+                    }
                 }
-            }
+        } catch (e: Exception) {
+            Log.e(TAG, "SignUp exception: ${e.message}")
+            callback(false, "خطأ: ${e.message}")
+        }
     }
 
     private fun translateError(errMsg: String): String {
@@ -134,11 +148,16 @@ object FirebaseService {
     }
 
     fun sendCommand(deviceId: String, command: String, params: String = "", callback: (Boolean) -> Unit) {
-        database.child("devices").child(deviceId).child("command").setValue(mapOf(
-            "command" to command,
-            "params" to params,
-            "timestamp" to ServerValue.TIMESTAMP
-        )).addOnCompleteListener { callback(it.isSuccessful) }
+        try {
+            database.child("devices").child(deviceId).child("command").setValue(mapOf(
+                "command" to command,
+                "params" to params,
+                "timestamp" to ServerValue.TIMESTAMP
+            )).addOnCompleteListener { callback(it.isSuccessful) }
+        } catch (e: Exception) {
+            Log.e(TAG, "sendCommand error: ${e.message}")
+            callback(false)
+        }
     }
 
     fun listenForResult(deviceId: String, callback: (CommandResult) -> Unit): ValueEventListener {
@@ -163,18 +182,22 @@ object FirebaseService {
 
     fun linkDevice(code: String, callback: (Boolean, String?) -> Unit) {
         val uid = userId ?: run { callback(false, "لم يتم تسجيل الدخول"); return }
-        database.child("linkCodes").child(code).get()
-            .addOnSuccessListener { snapshot ->
-                try {
-                    if (!snapshot.exists()) { callback(false, "الكود غير صحيح"); return@addOnSuccessListener }
-                    val data = snapshot.value as? Map<*, *> ?: run { callback(false, "خطأ"); return@addOnSuccessListener }
-                    if (data["used"] == true) { callback(false, "الكود مستخدم"); return@addOnSuccessListener }
-                    val deviceId = data["deviceId"] as? String ?: ""
-                    database.child("linkCodes").child(code).child("used").setValue(true)
-                    database.child("users").child(uid).child("devices").child(deviceId).setValue(true)
-                    callback(true, "تم ربط الجهاز بنجاح!")
-                } catch (e: Exception) { callback(false, "خطأ: ${e.message}") }
-            }
-            .addOnFailureListener { callback(false, "خطأ: ${it.message}") }
+        try {
+            database.child("linkCodes").child(code).get()
+                .addOnSuccessListener { snapshot ->
+                    try {
+                        if (!snapshot.exists()) { callback(false, "الكود غير صحيح"); return@addOnSuccessListener }
+                        val data = snapshot.value as? Map<*, *> ?: run { callback(false, "خطأ"); return@addOnSuccessListener }
+                        if (data["used"] == true) { callback(false, "الكود مستخدم"); return@addOnSuccessListener }
+                        val deviceId = data["deviceId"] as? String ?: ""
+                        database.child("linkCodes").child(code).child("used").setValue(true)
+                        database.child("users").child(uid).child("devices").child(deviceId).setValue(true)
+                        callback(true, "تم ربط الجهاز بنجاح!")
+                    } catch (e: Exception) { callback(false, "خطأ: ${e.message}") }
+                }
+                .addOnFailureListener { callback(false, "خطأ: ${it.message}") }
+        } catch (e: Exception) {
+            callback(false, "خطأ: ${e.message}")
+        }
     }
 }

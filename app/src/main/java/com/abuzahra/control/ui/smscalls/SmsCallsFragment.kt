@@ -1,6 +1,7 @@
 package com.abuzahra.control.ui.smscalls
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -22,17 +23,26 @@ class SmsCallsFragment : Fragment() {
         ActionItem("📋", "الحافظة", "get_clipboard")
     )
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        return inflater.inflate(R.layout.fragment_generic, container, false)
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        return try {
+            inflater.inflate(R.layout.fragment_generic, container, false)
+        } catch (e: Exception) {
+            Log.e("SmsCalls", "inflate error: ${e.message}")
+            TextView(requireContext()).apply { text = "خطأ" }
+        }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        view.findViewById<TextView>(R.id.tvSectionTitle).text = "📱 الرسائل والمكالمات"
-        val rv = view.findViewById<RecyclerView>(R.id.rvActions)
-        rv.layoutManager = LinearLayoutManager(requireContext())
-        rv.adapter = ActionAdapter(actions) { a ->
-            (activity as? MainActivity)?.sendCommand(a.command)
+        try {
+            view.findViewById<TextView>(R.id.tvSectionTitle)?.text = "📱 الرسائل والمكالمات"
+            val rv = view.findViewById<RecyclerView>(R.id.rvActions)
+            rv?.layoutManager = LinearLayoutManager(requireContext())
+            rv?.adapter = ActionAdapter(actions) { a ->
+                (activity as? MainActivity)?.sendCommand(a.command)
+            }
+        } catch (e: Exception) {
+            Log.e("SmsCalls", "onViewCreated error: ${e.message}")
         }
     }
 }

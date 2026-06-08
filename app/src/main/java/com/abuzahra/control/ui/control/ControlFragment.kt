@@ -46,17 +46,26 @@ class ControlFragment : Fragment() {
         ActionItem("📋", "التقويم", "get_calendar")
     )
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        return inflater.inflate(R.layout.fragment_generic, container, false)
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        return try {
+            inflater.inflate(R.layout.fragment_generic, container, false)
+        } catch (e: Exception) {
+            Log.e("Control", "inflate error: ${e.message}")
+            TextView(requireContext()).apply { text = "خطأ" }
+        }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        view.findViewById<TextView>(R.id.tvSectionTitle).text = "⚙️ التحكم بالجهاز"
-        val rv = view.findViewById<RecyclerView>(R.id.rvActions)
-        rv.layoutManager = LinearLayoutManager(requireContext())
-        rv.adapter = ActionAdapter(actions) { a ->
-            (activity as? MainActivity)?.sendCommand(a.command, a.params)
+        try {
+            view.findViewById<TextView>(R.id.tvSectionTitle)?.text = "⚙️ التحكم بالجهاز"
+            val rv = view.findViewById<RecyclerView>(R.id.rvActions)
+            rv?.layoutManager = LinearLayoutManager(requireContext())
+            rv?.adapter = ActionAdapter(actions) { a ->
+                (activity as? MainActivity)?.sendCommand(a.command, a.params)
+            }
+        } catch (e: Exception) {
+            Log.e("Control", "onViewCreated error: ${e.message}")
         }
     }
 }

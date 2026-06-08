@@ -24,60 +24,64 @@ import kotlinx.coroutines.launch
 
 class DashboardFragment : Fragment() {
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        return inflater.inflate(R.layout.fragment_dashboard, container, false)
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        return try {
+            inflater.inflate(R.layout.fragment_dashboard, container, false)
+        } catch (e: Exception) {
+            Log.e("Dashboard", "inflate error: ${e.message}")
+            TextView(requireContext()).apply { text = "خطأ في تحميل الواجهة" }
+        }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        Log.d("Dashboard", "onViewCreated START")
+        try {
+            val rvDevices = view.findViewById<RecyclerView>(R.id.rvDevices)
+            val emptyState = view.findViewById<LinearLayout>(R.id.emptyState)
+            val tvWelcome = view.findViewById<TextView>(R.id.tvWelcome)
+            val btnLinkNewDevice = view.findViewById<Button>(R.id.btnLinkNewDevice)
+            val btnEmptyLink = view.findViewById<Button>(R.id.btnEmptyLink)
 
-        val rvDevices = view.findViewById<RecyclerView>(R.id.rvDevices)
-        val emptyState = view.findViewById<LinearLayout>(R.id.emptyState)
-        val tvWelcome = view.findViewById<TextView>(R.id.tvWelcome)
-        val btnLinkNewDevice = view.findViewById<Button>(R.id.btnLinkNewDevice)
-        val btnEmptyLink = view.findViewById<Button>(R.id.btnEmptyLink)
+            val adapter = DeviceAdapter(emptyList()) { device ->
+                (activity as? MainActivity)?.selectDevice(device)
+            }
+            rvDevices?.layoutManager = LinearLayoutManager(requireContext())
+            rvDevices?.adapter = adapter
 
-        Log.d("Dashboard", "All views found OK")
+            // Set welcome text
+            try {
+                val email = FirebaseService.userEmail
+                tvWelcome?.text = if (email != null) "مرحباً، ${email.split("@").firstOrNull()}" else "مرحباً"
+            } catch (_: Exception) {}
 
-        val adapter = DeviceAdapter(emptyList()) { device ->
-            (activity as? MainActivity)?.selectDevice(device)
-        }
-        rvDevices.layoutManager = LinearLayoutManager(requireContext())
-        rvDevices.adapter = adapter
+            // Link buttons
+            val openLink = View.OnClickListener {
+                try { startActivity(Intent(requireContext(), DeviceLinkActivity::class.java)) }
+                catch (_: Exception) {}
+            }
+            btnLinkNewDevice?.setOnClickListener(openLink)
+            btnEmptyLink?.setOnClickListener(openLink)
 
-        // Set welcome text
-        val email = FirebaseService.userEmail
-        tvWelcome.text = if (email != null) "مرحباً، ${email.split("@").firstOrNull()}" else "مرحباً"
-
-        // Link buttons
-        val openLink = View.OnClickListener {
-            try { startActivity(Intent(requireContext(), DeviceLinkActivity::class.java)) }
-            catch (_: Exception) {}
-        }
-        btnLinkNewDevice.setOnClickListener(openLink)
-        btnEmptyLink.setOnClickListener(openLink)
-
-        // Observe devices
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                FirebaseService.getDevices().collect { devices ->
-                    Log.d("Dashboard", "Got ${devices.size} devices")
-                    adapter.update(devices)
-                    if (devices.isEmpty()) {
-                        emptyState.visibility = View.VISIBLE
-                        rvDevices.visibility = View.GONE
-                    } else {
-                        emptyState.visibility = View.GONE
-                        rvDevices.visibility = View.VISIBLE
-                        if (MainActivity.selectedDevice == null) {
-                            (activity as? MainActivity)?.selectDevice(devices.first())
+            // Observe devices
+            viewLifecycleOwner.lifecycleScope.launch {
+                viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    FirebaseService.getDevices().collect { devices ->
+                        adapter.update(devices)
+                        if (devices.isEmpty()) {
+                            emptyState?.visibility = View.VISIBLE
+                            rvDevices?.visibility = View.GONE
+                        } else {
+                            emptyState?.visibility = View.GONE
+                            rvDevices?.visibility = View.VISIBLE
+                            if (MainActivity.selectedDevice == null) {
+                                (activity as? MainActivity)?.selectDevice(devices.first())
+                            }
                         }
                     }
                 }
             }
+        } catch (e: Exception) {
+            Log.e("Dashboard", "onViewCreated error: ${e.message}")
         }
-
-        Log.d("Dashboard", "onViewCreated COMPLETE")
     }
 }

@@ -13,6 +13,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 
 class LoginActivity : AppCompatActivity() {
     private var googleClient: GoogleSignInClient? = null
@@ -20,8 +21,13 @@ class LoginActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_login)
-        Log.d("Login", "onCreate - layout set OK")
+        try {
+            setContentView(R.layout.activity_login)
+        } catch (e: Exception) {
+            Log.e("Login", "setContentView CRASH: ${e.message}")
+            finish()
+            return
+        }
 
         val etEmail = findViewById<EditText>(R.id.etEmail)
         val etPassword = findViewById<EditText>(R.id.etPassword)
@@ -33,27 +39,29 @@ class LoginActivity : AppCompatActivity() {
         // Google Sign-In setup
         try {
             val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken("787676787951-20uf0a81hb0n5b95t9htb7cd073lu2bm.apps.googleusercontent.com")
+                .requestIdToken(getString(R.string.default_web_client_id))
                 .requestEmail()
                 .build()
             googleClient = GoogleSignIn.getClient(this, gso)
+            Log.d("Login", "Google Sign-In client created OK")
         } catch (e: Exception) {
-            Log.w("Login", "Google Sign-In init: ${e.message}")
+            Log.w("Login", "Google Sign-In init failed: ${e.message}")
         }
 
+        // Email login
         btnLogin.setOnClickListener {
-            val email = etEmail.text.toString().trim()
-            val pass = etPassword.text.toString().trim()
+            val email = etEmail?.text.toString().trim()
+            val pass = etPassword?.text.toString().trim()
             if (email.isEmpty() || pass.isEmpty()) {
                 Toast.makeText(this, "أدخل البريد وكلمة المرور", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            btnLogin.isEnabled = false
-            btnLogin.text = "جاري التحميل..."
+            btnLogin?.isEnabled = false
+            btnLogin?.text = "جاري التحميل..."
 
             FirebaseService.signIn(email, pass) { ok, err ->
-                btnLogin.isEnabled = true
-                btnLogin.text = "دخول"
+                btnLogin?.isEnabled = true
+                btnLogin?.text = "دخول"
                 if (ok) {
                     Toast.makeText(this, "تم تسجيل الدخول ✅", Toast.LENGTH_SHORT).show()
                     openMain()
@@ -63,25 +71,32 @@ class LoginActivity : AppCompatActivity() {
             }
         }
 
-        tvForgotPassword.setOnClickListener {
-            val email = etEmail.text.toString().trim()
+        // Forgot password
+        tvForgotPassword?.setOnClickListener {
+            val email = etEmail?.text.toString().trim()
             if (email.isEmpty()) {
                 Toast.makeText(this, "أدخل بريدك أولاً", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            FirebaseAuth.getInstance().sendPasswordResetEmail(email)
-                .addOnCompleteListener { t ->
-                    Toast.makeText(this,
-                        if (t.isSuccessful) "تم إرسال رابط إعادة التعيين" else "فشل: ${t.exception?.message}",
-                        Toast.LENGTH_LONG).show()
-                }
+            try {
+                FirebaseAuth.getInstance().sendPasswordResetEmail(email)
+                    .addOnCompleteListener { t ->
+                        Toast.makeText(this,
+                            if (t.isSuccessful) "تم إرسال رابط إعادة التعيين" else "فشل: ${t.exception?.message}",
+                            Toast.LENGTH_LONG).show()
+                    }
+            } catch (e: Exception) {
+                Toast.makeText(this, "خطأ: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
         }
 
-        tvGoRegister.setOnClickListener {
+        // Go to register
+        tvGoRegister?.setOnClickListener {
             startActivity(Intent(this, RegisterActivity::class.java))
         }
 
-        btnGoogleSignIn.setOnClickListener {
+        // Google sign in
+        btnGoogleSignIn?.setOnClickListener {
             try {
                 val client = googleClient
                 if (client != null) {
@@ -90,7 +105,7 @@ class LoginActivity : AppCompatActivity() {
                     Toast.makeText(this, "تسجيل Google غير متاح", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
-                Toast.makeText(this, "خطأ في خدمات Google", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "خطأ في خدمات Google: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -101,7 +116,7 @@ class LoginActivity : AppCompatActivity() {
             try {
                 val task = GoogleSignIn.getSignedInAccountFromIntent(data)
                 val account = task.result
-                val cred = com.google.firebase.auth.GoogleAuthProvider.getCredential(account.idToken, null)
+                val cred = GoogleAuthProvider.getCredential(account.idToken, null)
                 FirebaseAuth.getInstance().signInWithCredential(cred)
                     .addOnCompleteListener { t ->
                         if (t.isSuccessful) {
@@ -112,7 +127,7 @@ class LoginActivity : AppCompatActivity() {
                         }
                     }
             } catch (e: Exception) {
-                Toast.makeText(this, "فشل تسجيل Google", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "فشل تسجيل Google: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }

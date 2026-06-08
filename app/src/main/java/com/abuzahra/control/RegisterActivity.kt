@@ -13,20 +13,24 @@ import com.abuzahra.control.service.FirebaseService
 class RegisterActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_register)
-        Log.d("Register", "onCreate - layout set OK")
+        try {
+            setContentView(R.layout.activity_register)
+        } catch (e: Exception) {
+            Log.e("Register", "setContentView CRASH: ${e.message}")
+            finish()
+            return
+        }
 
         val etEmail = findViewById<EditText>(R.id.etEmail)
         val etPassword = findViewById<EditText>(R.id.etPassword)
         val etConfirmPassword = findViewById<EditText>(R.id.etConfirmPassword)
         val btnRegister = findViewById<Button>(R.id.btnRegister)
         val tvGoLogin = findViewById<TextView>(R.id.tvGoLogin)
-        val btnGoogleSignIn = findViewById<Button>(R.id.btnGoogleSignIn)
 
-        btnRegister.setOnClickListener {
-            val email = etEmail.text.toString().trim()
-            val pass = etPassword.text.toString()
-            val confirm = etConfirmPassword.text.toString()
+        btnRegister?.setOnClickListener {
+            val email = etEmail?.text.toString().trim()
+            val pass = etPassword?.text.toString()
+            val confirm = etConfirmPassword?.text.toString()
 
             if (email.isEmpty() || pass.isEmpty()) {
                 Toast.makeText(this, "أكمل الحقول", Toast.LENGTH_SHORT).show()
@@ -60,13 +64,9 @@ class RegisterActivity : AppCompatActivity() {
             }
         }
 
-        tvGoLogin.setOnClickListener {
+        tvGoLogin?.setOnClickListener {
             startActivity(Intent(this, LoginActivity::class.java))
             finish()
-        }
-
-        btnGoogleSignIn.setOnClickListener {
-            Toast.makeText(this, "سجل دخول عبر البريد أولاً ثم اربط حساب Google من الإعدادات", Toast.LENGTH_LONG).show()
         }
     }
 
