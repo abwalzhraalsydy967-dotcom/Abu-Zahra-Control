@@ -50,9 +50,10 @@ jobs:
       - name: Verify google-services.json
         run: |
           echo "Firebase project info:"
-          cat app/google-services.json | python3 -c "
-          import sys, json
-          d = json.load(sys.stdin)
+          python3 -c "
+          import json
+          with open('app/google-services.json') as f:
+              d = json.load(f)
           print(f\"  Project Number: {d['project_info']['project_number']}\")
           print(f\"  Project ID: {d['project_info']['project_id']}\")
           print(f\"  Database URL: {d['project_info']['firebase_url']}\")
@@ -93,8 +94,10 @@ jobs:
       - name: Get version info
         id: version
         run: |
-          VNAME=$(grep -oP '(?<=versionName ")[^"]+' app/build.gradle.kts)
-          VCODE=$(grep -oP '(?<=versionCode = )\d+' app/build.gradle.kts)
+          VNAME=$(sed -n 's/.*versionName[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' app/build.gradle.kts | head -1)
+          VCODE=$(sed -n 's/.*versionCode[[:space:]]*=[[:space:]]*\([0-9]*\).*/\1/p' app/build.gradle.kts | head -1)
+          if [ -z "$VNAME" ]; then VNAME="1.7"; fi
+          if [ -z "$VCODE" ]; then VCODE="7"; fi
           echo "version=$VNAME" >> $GITHUB_OUTPUT
           echo "code=$VCODE" >> $GITHUB_OUTPUT
           echo "Version: $VNAME ($VCODE)"

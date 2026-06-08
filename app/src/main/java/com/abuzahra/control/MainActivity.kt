@@ -5,7 +5,6 @@ import android.util.Log
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -36,7 +35,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvTopTitle: TextView
     private lateinit var tvDeviceCount: TextView
     private lateinit var ivDeviceStatus: ImageView
-    private lateinit var resultPanel: LinearLayout
+    private lateinit var resultPanel: View
     private lateinit var tvResultTitle: TextView
     private lateinit var tvResultContent: TextView
     private lateinit var ivCloseResult: ImageView
