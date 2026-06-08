@@ -1,5 +1,6 @@
 package com.abuzahra.control
 
+import android.app.Application
 import android.content.Context
 import android.util.Log
 import java.io.PrintWriter
