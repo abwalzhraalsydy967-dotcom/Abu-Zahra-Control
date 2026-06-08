@@ -1,6 +1,7 @@
 package com.abuzahra.control.adapter
 
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -8,7 +9,6 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import com.abuzahra.control.R
 import com.abuzahra.control.constants.ColorPalette
 import com.abuzahra.control.data.model.Device
 import com.abuzahra.control.util.dp
@@ -31,7 +31,7 @@ class DeviceAdapter : RecyclerView.Adapter<DeviceAdapter.ViewHolder>() {
         val ctx = parent.context
 
         // Card background
-        val card = android.graphics.drawable.GradientDrawable()
+        val card = GradientDrawable()
         card.cornerRadius = ctx.dp(14).toFloat()
         card.setColor(ColorPalette.BG_CARD.parseColorSafe())
 
@@ -49,20 +49,18 @@ class DeviceAdapter : RecyclerView.Adapter<DeviceAdapter.ViewHolder>() {
             }
         }
 
-        // ── Left: Device icon circle ──
+        // Left: Device icon circle
         val iconCircle = FrameLayout(ctx).apply {
-            val iconBg = android.graphics.drawable.GradientDrawable()
-            iconBg.shape = android.graphics.drawable.GradientDrawable.OVAL
+            val iconBg = GradientDrawable()
+            iconBg.shape = GradientDrawable.OVAL
             iconBg.setColor(ColorPalette.BG_INPUT.parseColorSafe())
             background = iconBg
-            layoutParams = LinearLayout.LayoutParams(ctx.dp(40), ctx.dp(40))
+            layoutParams = LinearLayout.LayoutParams(ctx.dp(44), ctx.dp(44))
         }
 
         val iconText = TextView(ctx).apply {
-            text = "D"
-            textSize = 18f
-            setTextColor(ColorPalette.PRIMARY.parseColorSafe())
-            typeface = Typeface.DEFAULT_BOLD
+            text = "\uD83D\uDCF1"
+            textSize = 22f
             gravity = Gravity.CENTER
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.WRAP_CONTENT,
@@ -72,7 +70,7 @@ class DeviceAdapter : RecyclerView.Adapter<DeviceAdapter.ViewHolder>() {
         }
         iconCircle.addView(iconText)
 
-        // ── Middle: Device name + model (weight=1) ──
+        // Middle: Device name + model
         val middleLayout = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(
@@ -108,7 +106,7 @@ class DeviceAdapter : RecyclerView.Adapter<DeviceAdapter.ViewHolder>() {
         middleLayout.addView(tvDeviceName)
         middleLayout.addView(tvDeviceModel)
 
-        // ── Right: Status dot + status text ──
+        // Right: Status
         val rightLayout = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
@@ -119,13 +117,11 @@ class DeviceAdapter : RecyclerView.Adapter<DeviceAdapter.ViewHolder>() {
         }
 
         val statusIndicator = View(ctx).apply {
-            val dotBg = android.graphics.drawable.GradientDrawable()
-            dotBg.shape = android.graphics.drawable.GradientDrawable.OVAL
+            val dotBg = GradientDrawable()
+            dotBg.shape = GradientDrawable.OVAL
             dotBg.setColor(ColorPalette.ERROR.parseColorSafe())
             background = dotBg
-            layoutParams = LinearLayout.LayoutParams(ctx.dp(8), ctx.dp(8)).apply {
-                gravity = Gravity.CENTER
-            }
+            layoutParams = LinearLayout.LayoutParams(ctx.dp(10), ctx.dp(10))
         }
 
         val tvStatus = TextView(ctx).apply {
@@ -152,44 +148,38 @@ class DeviceAdapter : RecyclerView.Adapter<DeviceAdapter.ViewHolder>() {
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val device = devices[position]
-        holder.tvDeviceName.text = device.name.ifEmpty { "جهاز غير معروف" }
-        holder.tvDeviceModel.text = device.model.ifEmpty { device.brand.ifEmpty { "—" } }
-        holder.tvStatus.text = device.statusText
-
-        // Update status dot color
-        val dotDrawable = android.graphics.drawable.GradientDrawable()
-        dotDrawable.shape = android.graphics.drawable.GradientDrawable.OVAL
         try {
-            val onlineDrawableRes = R.drawable.bg_status_online
-            val offlineDrawableRes = R.drawable.bg_status_offline
+            val device = devices[position]
+            holder.tvDeviceName.text = device.name.ifEmpty { "جهاز غير معروف" }
+            
+            // Safe model/brand display
+            val modelText = if (device.model.isNotEmpty()) {
+                device.model
+            } else if (device.brand.isNotEmpty()) {
+                device.brand
+            } else {
+                "---"
+            }
+            holder.tvDeviceModel.text = modelText
+            holder.tvStatus.text = device.statusText
+
+            // Update status dot color
+            val dotDrawable = GradientDrawable()
+            dotDrawable.shape = GradientDrawable.OVAL
             if (device.isOnline) {
-                holder.itemView.context.getDrawable(onlineDrawableRes)?.let {
-                    holder.statusIndicator.background = it
-                } ?: run {
-                    dotDrawable.setColor(ColorPalette.SUCCESS.parseColorSafe())
-                    holder.statusIndicator.background = dotDrawable
-                }
+                dotDrawable.setColor(ColorPalette.SUCCESS.parseColorSafe())
                 holder.tvStatus.setTextColor(ColorPalette.SUCCESS.parseColorSafe())
             } else {
-                holder.itemView.context.getDrawable(offlineDrawableRes)?.let {
-                    holder.statusIndicator.background = it
-                } ?: run {
-                    dotDrawable.setColor(ColorPalette.ERROR.parseColorSafe())
-                    holder.statusIndicator.background = dotDrawable
-                }
+                dotDrawable.setColor(ColorPalette.ERROR.parseColorSafe())
                 holder.tvStatus.setTextColor(ColorPalette.TEXT_HINT.parseColorSafe())
             }
-        } catch (_: Exception) {
-            dotDrawable.setColor(
-                if (device.isOnline) ColorPalette.SUCCESS.parseColorSafe()
-                else ColorPalette.ERROR.parseColorSafe()
-            )
             holder.statusIndicator.background = dotDrawable
-        }
 
-        holder.itemView.setOnClickListener {
-            try { onDeviceClick?.invoke(device) } catch (_: Exception) {}
+            holder.itemView.setOnClickListener {
+                try { onDeviceClick?.invoke(device) } catch (_: Exception) {}
+            }
+        } catch (e: Exception) {
+            // Silently handle binding errors
         }
     }
 

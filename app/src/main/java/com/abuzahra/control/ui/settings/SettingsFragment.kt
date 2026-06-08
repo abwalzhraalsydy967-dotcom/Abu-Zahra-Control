@@ -1,7 +1,6 @@
 package com.abuzahra.control.ui.settings
 
 import android.content.Intent
-import android.graphics.Typeface
 import android.os.Bundle
 import android.util.Log
 import android.view.Gravity
@@ -28,6 +27,7 @@ class SettingsFragment : Fragment() {
         const val TAG = "SettingsFragment"
     }
 
+    private lateinit var contentContainer: LinearLayout
     private lateinit var tvEmail: TextView
     private lateinit var tvUid: TextView
 
@@ -39,10 +39,8 @@ class SettingsFragment : Fragment() {
         return try {
             buildView()
         } catch (e: Exception) {
-            Log.e(TAG, "onCreateView error: ${e.message}")
-            View(requireContext()).apply {
-                setBackgroundColor(ColorPalette.BG_PRIMARY.parseColorSafe())
-            }
+            Log.e(TAG, "onCreateView error: ${e.message}", e)
+            createErrorView("خطأ في تحميل الإعدادات")
         }
     }
 
@@ -51,7 +49,17 @@ class SettingsFragment : Fragment() {
         try {
             populateUserInfo()
         } catch (e: Exception) {
-            Log.e(TAG, "onViewCreated error: ${e.message}")
+            Log.e(TAG, "onViewCreated error: ${e.message}", e)
+        }
+    }
+
+    private fun createErrorView(message: String): View {
+        val ctx = requireContext()
+        return ViewUtils.createEmptyStateView(ctx, message, "إعادة المحاولة") {
+            try {
+                contentContainer.removeAllViews()
+                populateUserInfo()
+            } catch (_: Exception) {}
         }
     }
 
@@ -59,29 +67,45 @@ class SettingsFragment : Fragment() {
         val ctx = requireContext()
         val scrollView = ViewUtils.createScrollView(ctx)
 
-        val container = ViewUtils.createVerticalLayout(ctx).apply {
+        contentContainer = ViewUtils.createVerticalLayout(ctx).apply {
             setBackgroundColor(ColorPalette.BG_PRIMARY.parseColorSafe())
-            setPadding(dp(24), dp(24), dp(24), dp(24))
+            setPadding(dp(16), dp(16), dp(16), dp(16))
         }
 
-        // Email
-        tvEmail = TextView(ctx).apply {
-            text = ""
-            setTextColor(ColorPalette.TEXT_PRIMARY.parseColorSafe())
-            textSize = 18f
-            typeface = Typeface.DEFAULT_BOLD
+        // ── User Profile Card ──
+        val profileCard = ViewUtils.createCard(ctx, padding = dp(20))
+        profileCard.gravity = Gravity.CENTER
+
+        val profileIcon = TextView(ctx).apply {
+            text = "\uD83D\uDC64"
+            textSize = 48f
             gravity = Gravity.CENTER
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
         }
+        profileCard.addView(profileIcon)
 
-        // UID
+        tvEmail = TextView(ctx).apply {
+            text = "جاري التحميل..."
+            setTextColor(ColorPalette.TEXT_PRIMARY.parseColorSafe())
+            textSize = 18f
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dp(8)
+            }
+        }
+        profileCard.addView(tvEmail)
+
         tvUid = TextView(ctx).apply {
             text = ""
             setTextColor(ColorPalette.TEXT_HINT.parseColorSafe())
-            textSize = 12f
+            textSize = 11f
             gravity = Gravity.CENTER
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -90,55 +114,65 @@ class SettingsFragment : Fragment() {
                 topMargin = dp(4)
             }
         }
+        profileCard.addView(tvUid)
 
-        // Divider
-        val divider = ViewUtils.createDivider(ctx, marginTop = dp(24), marginBot = dp(16))
+        // ── Device Section ──
+        contentContainer.addView(profileCard)
 
-        // ── Settings Cards ──
-        val btnLinkDevice = createSettingsCard(ctx, "ربط جهاز جديد") {
+        val deviceSectionHeader = ViewUtils.createSectionHeader(ctx, "الأجهزة")
+
+        val btnLinkDevice = ViewUtils.createSettingsRow(ctx, "ربط جهاز جديد", "أدخل كود الربط من الجهاز المستهدف") {
             try {
-                startActivity(Intent(ctx, DeviceLinkActivity::class.java))
+                startActivity(Intent(requireContext(), DeviceLinkActivity::class.java))
             } catch (e: Exception) {
                 Log.e(TAG, "btnLinkDevice click error: ${e.message}")
+                showToast("خطأ في فتح صفحة الربط")
             }
         }
 
-        val btnAppInfo = createSettingsCard(ctx, "حول التطبيق") {
+        // ── App Section ──
+        val appSectionHeader = ViewUtils.createSectionHeader(ctx, "التطبيق")
+
+        val btnAppInfo = ViewUtils.createSettingsRow(ctx, "حول التطبيق", "الإصدار والمعلومات") {
             try {
                 val versionName = try {
                     requireActivity().packageManager
                         .getPackageInfo(requireActivity().packageName, 0).versionName ?: "1.0"
                 } catch (_: Exception) { "1.0" }
-                ctx.showToast("Abu Zahra Control v$versionName")
+                showToast("Abu Zahra Control v$versionName")
             } catch (e: Exception) {
                 Log.e(TAG, "btnAppInfo click error: ${e.message}")
             }
         }
 
-        val btnCrashLog = createSettingsCard(ctx, "سجل الأخطاء") {
+        // ── Debug Section ──
+        val debugSectionHeader = ViewUtils.createSectionHeader(ctx, "الصيانة")
+
+        val btnCrashLog = ViewUtils.createSettingsRow(ctx, "سجل الأخطاء", "عرض آخر خطأ حدث") {
             try {
                 val (crashMsg, crashTime) = PrefsManager.getCrash()
                 if (crashMsg.isNotEmpty()) {
                     val timeAgo = try { crashTime.toTimeAgo() } catch (_: Exception) { "" }
-                    ctx.showToast("$timeAgo: $crashMsg")
+                    showToast("$timeAgo: $crashMsg")
                 } else {
-                    ctx.showToast("لا توجد أخطاء مسجلة")
+                    showToast("لا توجد أخطاء مسجلة")
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "btnCrashLog click error: ${e.message}")
             }
         }
 
-        val btnClearData = createSettingsCard(ctx, "مسح البيانات المحلية") {
+        val btnClearData = ViewUtils.createSettingsRow(ctx, "مسح البيانات المحلية", "حذف سجل الأخطاء والبيانات المؤقتة") {
             try {
                 PrefsManager.clearCrash()
-                ctx.showToast("تم مسح البيانات المحلية")
+                showToast("تم مسح البيانات المحلية")
             } catch (e: Exception) {
                 Log.e(TAG, "btnClearData click error: ${e.message}")
+                showToast("خطأ في مسح البيانات")
             }
         }
 
-        // Spacer
+        // ── Spacer ──
         val spacer = View(ctx).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -146,60 +180,33 @@ class SettingsFragment : Fragment() {
             )
         }
 
-        // Logout button
+        // ── Logout Button ──
         val btnLogout = ViewUtils.createDangerButton(ctx, "تسجيل الخروج") {
             try {
                 FirebaseManager.signOut()
-                val intent = Intent(ctx, LoginActivity::class.java).apply {
+                val intent = Intent(requireContext(), LoginActivity::class.java).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                 }
                 startActivity(intent)
             } catch (e: Exception) {
                 Log.e(TAG, "btnLogout click error: ${e.message}")
-                ctx.showToast("خطأ في تسجيل الخروج")
+                showToast("خطأ في تسجيل الخروج")
             }
         }
 
-        container.addView(tvEmail)
-        container.addView(tvUid)
-        container.addView(divider)
-        container.addView(btnLinkDevice)
-        container.addView(btnAppInfo)
-        container.addView(btnCrashLog)
-        container.addView(btnClearData)
-        container.addView(spacer)
-        container.addView(btnLogout)
+        // Assemble
+        contentContainer.addView(deviceSectionHeader)
+        contentContainer.addView(btnLinkDevice)
+        contentContainer.addView(appSectionHeader)
+        contentContainer.addView(btnAppInfo)
+        contentContainer.addView(debugSectionHeader)
+        contentContainer.addView(btnCrashLog)
+        contentContainer.addView(btnClearData)
+        contentContainer.addView(spacer)
+        contentContainer.addView(btnLogout)
 
-        scrollView.addView(container)
+        scrollView.addView(contentContainer)
         return scrollView
-    }
-
-    private fun createSettingsCard(
-        ctx: android.content.Context,
-        title: String,
-        onClick: () -> Unit
-    ): View {
-        val card = android.graphics.drawable.GradientDrawable()
-        card.cornerRadius = ctx.dp(14).toFloat()
-        card.setColor(ColorPalette.BG_CARD.parseColorSafe())
-
-        return TextView(ctx).apply {
-            text = title
-            setTextColor(ColorPalette.TEXT_PRIMARY.parseColorSafe())
-            textSize = 15f
-            gravity = Gravity.START or Gravity.CENTER_VERTICAL
-            setPadding(ctx.dp(16), ctx.dp(16), ctx.dp(16), ctx.dp(16))
-            background = card
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                setMargins(0, ctx.dp(6), 0, ctx.dp(6))
-            }
-            setOnClickListener {
-                try { onClick() } catch (_: Exception) {}
-            }
-        }
     }
 
     private fun populateUserInfo() {
@@ -207,7 +214,7 @@ class SettingsFragment : Fragment() {
             val email = FirebaseManager.userEmail
             val uid = FirebaseManager.userId
             tvEmail.text = email ?: "غير مسجل الدخول"
-            tvUid.text = uid ?: ""
+            tvUid.text = if (!uid.isNullOrEmpty()) "UID: $uid" else ""
         } catch (e: Exception) {
             Log.e(TAG, "populateUserInfo error: ${e.message}")
             tvEmail.text = "غير مسجل الدخول"

@@ -19,13 +19,13 @@ import androidx.recyclerview.widget.RecyclerView
 import com.abuzahra.control.R
 import com.abuzahra.control.adapter.DeviceAdapter
 import com.abuzahra.control.constants.ColorPalette
-import com.abuzahra.control.data.model.Device
 import com.abuzahra.control.service.FirebaseManager
 import com.abuzahra.control.ui.device.DeviceLinkActivity
 import com.abuzahra.control.ui.main.MainActivity
 import com.abuzahra.control.util.ViewUtils
 import com.abuzahra.control.util.dp
 import com.abuzahra.control.util.parseColorSafe
+import com.abuzahra.control.util.showToast
 import kotlinx.coroutines.launch
 
 class DashboardFragment : Fragment() {
@@ -35,9 +35,9 @@ class DashboardFragment : Fragment() {
     }
 
     private lateinit var tvWelcome: TextView
-    private lateinit var btnLinkNewDevice: View
     private lateinit var rvDevices: RecyclerView
     private lateinit var emptyStateContainer: LinearLayout
+    private lateinit var noDeviceView: View
     private val deviceAdapter = DeviceAdapter()
 
     override fun onCreateView(
@@ -48,10 +48,8 @@ class DashboardFragment : Fragment() {
         return try {
             buildView()
         } catch (e: Exception) {
-            Log.e(TAG, "onCreateView error: ${e.message}")
-            View(requireContext()).apply {
-                setBackgroundColor(ColorPalette.BG_PRIMARY.parseColorSafe())
-            }
+            Log.e(TAG, "onCreateView error: ${e.message}", e)
+            createErrorView("خطأ في تحميل لوحة التحكم")
         }
     }
 
@@ -60,7 +58,16 @@ class DashboardFragment : Fragment() {
         try {
             setupViews()
         } catch (e: Exception) {
-            Log.e(TAG, "onViewCreated error: ${e.message}")
+            Log.e(TAG, "onViewCreated error: ${e.message}", e)
+        }
+    }
+
+    private fun createErrorView(message: String): View {
+        val ctx = requireContext()
+        return ViewUtils.createEmptyStateView(ctx, message, "إعادة المحاولة") {
+            try {
+                setupViews()
+            } catch (_: Exception) {}
         }
     }
 
@@ -73,44 +80,71 @@ class DashboardFragment : Fragment() {
             setPadding(dp(16), dp(16), dp(16), dp(16))
         }
 
-        // Welcome text
+        // ── Welcome Card ──
+        val welcomeCard = ViewUtils.createCard(ctx, padding = dp(16))
+
         tvWelcome = TextView(ctx).apply {
             val email = try { FirebaseManager.userEmail ?: "" } catch (_: Exception) { "" }
-            text = "مرحباً، $email"
-            setTextColor(ColorPalette.PRIMARY.parseColorSafe())
-            textSize = 20f
+            text = "مرحباً"
+            setTextColor(ColorPalette.TEXT_PRIMARY.parseColorSafe())
+            textSize = 22f
             typeface = Typeface.DEFAULT_BOLD
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
         }
+        welcomeCard.addView(tvWelcome)
 
-        // Link new device button
-        btnLinkNewDevice = ViewUtils.createPrimaryButton(ctx, "ربط جهاز") {
-            try {
-                startActivity(Intent(requireContext(), DeviceLinkActivity::class.java))
-            } catch (e: Exception) {
-                Log.e(TAG, "btnLinkNewDevice click error: ${e.message}")
-            }
-        }
-
-        // Section title
-        val sectionTitle = ViewUtils.createTitleText(
-            ctx,
-            "الأجهزة المرتبطة",
-            sizeSp = 16f,
-            color = ColorPalette.TEXT_PRIMARY
-        ).apply {
+        val tvEmail = TextView(ctx).apply {
+            val email = try { FirebaseManager.userEmail ?: "" } catch (_: Exception) { "" }
+            text = email
+            setTextColor(ColorPalette.TEXT_SECONDARY.parseColorSafe())
+            textSize = 13f
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
-                topMargin = dp(24)
+                topMargin = dp(4)
+            }
+        }
+        welcomeCard.addView(tvEmail)
+
+        // ── Quick Stats Row ──
+        val statsRow = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dp(12)
             }
         }
 
-        // RecyclerView
+        val connectedCard = ViewUtils.createInfoCard(ctx, "متصل", "0", "\uD83D\uDD34")
+        val devicesCard = ViewUtils.createInfoCard(ctx, "الأجهزة", "0", "\uD83D\uDCF1")
+        val commandsCard = ViewUtils.createInfoCard(ctx, "الأوامر", "0", "\u26A1")
+
+        statsRow.addView(connectedCard)
+        statsRow.addView(View(ctx).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(8), 1)
+        })
+        statsRow.addView(devicesCard)
+        statsRow.addView(View(ctx).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(8), 1)
+        })
+        statsRow.addView(commandsCard)
+
+        // ── Link Device Button ──
+        val btnLinkDevice = ViewUtils.createPrimaryButton(ctx, "+ ربط جهاز جديد") {
+            try {
+                startActivity(Intent(requireContext(), DeviceLinkActivity::class.java))
+            } catch (e: Exception) {
+                Log.e(TAG, "btnLinkDevice click error: ${e.message}")
+                showToast("خطأ في فتح صفحة الربط")
+            }
+        }
+
+        // ── Section Title: Devices ──
+        val sectionTitle = ViewUtils.createSectionHeader(ctx, "الأجهزة المرتبطة")
+
+        // ── RecyclerView ──
         rvDevices = RecyclerView(ctx).apply {
             layoutManager = LinearLayoutManager(ctx)
             adapter = deviceAdapter
@@ -122,7 +156,7 @@ class DashboardFragment : Fragment() {
             }
         }
 
-        // Empty state container
+        // ── Empty State ──
         emptyStateContainer = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
@@ -133,6 +167,16 @@ class DashboardFragment : Fragment() {
             )
             visibility = View.GONE
 
+            val emptyIcon = TextView(ctx).apply {
+                text = "\uD83D\uDCF1"
+                textSize = 48f
+                gravity = Gravity.CENTER
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+            }
+
             val emptyMsg = TextView(ctx).apply {
                 text = "لا توجد أجهزة مرتبطة بعد"
                 setTextColor(ColorPalette.TEXT_SECONDARY.parseColorSafe())
@@ -141,10 +185,25 @@ class DashboardFragment : Fragment() {
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
-                )
+                ).apply {
+                    topMargin = dp(16)
+                }
             }
 
-            val emptyBtn = ViewUtils.createPrimaryButton(ctx, "ربط جهاز") {
+            val emptyHint = TextView(ctx).apply {
+                text = "قم بتثبيت التطبيق المستهدف على الجهاز واربطه باستخدام الكود"
+                setTextColor(ColorPalette.TEXT_HINT.parseColorSafe())
+                textSize = 12f
+                gravity = Gravity.CENTER
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = dp(8)
+                }
+            }
+
+            val emptyBtn = ViewUtils.createPrimaryButton(ctx, "ربط جهاز الآن") {
                 try {
                     startActivity(Intent(requireContext(), DeviceLinkActivity::class.java))
                 } catch (e: Exception) {
@@ -152,13 +211,38 @@ class DashboardFragment : Fragment() {
                 }
             }
 
+            addView(emptyIcon)
             addView(emptyMsg)
+            addView(emptyHint)
             addView(emptyBtn)
         }
 
-        container.addView(tvWelcome)
-        container.addView(btnLinkNewDevice)
+        // ── No device selected view ──
+        noDeviceView = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(dp(16), dp(24), dp(16), dp(16))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+
+            val warnText = TextView(ctx).apply {
+                text = "\u26A0 لم يتم اختيار جهاز"
+                setTextColor(ColorPalette.WARNING.parseColorSafe())
+                textSize = 14f
+                typeface = Typeface.DEFAULT_BOLD
+                gravity = Gravity.CENTER
+            }
+            addView(warnText)
+        }
+
+        // Assemble
+        container.addView(welcomeCard)
+        container.addView(statsRow)
+        container.addView(btnLinkDevice)
         container.addView(sectionTitle)
+        container.addView(noDeviceView)
         container.addView(rvDevices)
         container.addView(emptyStateContainer)
 
@@ -168,7 +252,7 @@ class DashboardFragment : Fragment() {
 
     private fun setupViews() {
         try {
-            // Update welcome with email
+            // Update welcome text
             val email = try { FirebaseManager.userEmail ?: "" } catch (_: Exception) { "" }
             tvWelcome.text = "مرحباً، $email"
 
@@ -176,6 +260,7 @@ class DashboardFragment : Fragment() {
             deviceAdapter.onDeviceClick = { device ->
                 try {
                     (activity as? MainActivity)?.selectDevice(device)
+                    showToast("تم اختيار: ${device.name}")
                 } catch (e: Exception) {
                     Log.e(TAG, "Device click error: ${e.message}")
                 }
@@ -190,13 +275,19 @@ class DashboardFragment : Fragment() {
                                 deviceAdapter.submitList(devices)
                                 if (devices.isEmpty()) {
                                     rvDevices.visibility = View.GONE
+                                    noDeviceView.visibility = View.GONE
                                     emptyStateContainer.visibility = View.VISIBLE
                                 } else {
                                     rvDevices.visibility = View.VISIBLE
                                     emptyStateContainer.visibility = View.GONE
+
+                                    val selected = MainActivity.selectedDevice
+                                    noDeviceView.visibility = if (selected != null) View.GONE else View.VISIBLE
+
                                     // Auto-select first device if none selected
                                     if (MainActivity.selectedDevice == null && devices.isNotEmpty()) {
                                         (activity as? MainActivity)?.selectDevice(devices[0])
+                                        noDeviceView.visibility = View.GONE
                                     }
                                 }
                             } catch (e: Exception) {
@@ -209,7 +300,7 @@ class DashboardFragment : Fragment() {
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "setupViews error: ${e.message}")
+            Log.e(TAG, "setupViews error: ${e.message}", e)
         }
     }
 }

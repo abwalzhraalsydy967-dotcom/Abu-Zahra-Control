@@ -5,107 +5,107 @@ import com.abuzahra.control.data.model.ActionItem
 class CommandRepository {
 
     fun getDeviceInfoActions(): List<ActionItem> = listOf(
-        ActionItem("info", "معلومات الجهاز", "get_info", category = "info"),
-        ActionItem("battery", "البطارية", "get_battery", category = "info"),
-        ActionItem("location", "الموقع", "get_location", category = "info"),
-        ActionItem("wifi", "معلومات WiFi", "get_wifi_info", category = "info"),
-        ActionItem("signal", "معلومات الشبكة", "get_network_info", category = "info"),
-        ActionItem("storage", "معلومات التخزين", "get_storage_info", category = "info"),
-        ActionItem("sim", "معلومات SIM", "get_sim_info", category = "info"),
-        ActionItem("apps", "التطبيقات المثبتة", "get_installed_apps", category = "info"),
-        ActionItem("running", "التطبيقات المشغلة", "get_running_apps", category = "info"),
-        ActionItem("imei", "رقم IMEI", "get_imei", category = "info")
+        ActionItem("\uD83D\uDCF1", "معلومات الجهاز", "get_info", category = "info"),
+        ActionItem("\uD83D\uDD0B", "البطارية", "get_battery", category = "info"),
+        ActionItem("\uD83D\uDCCD", "الموقع", "get_location", category = "info"),
+        ActionItem("\uD83D\uDEA7", "معلومات WiFi", "get_wifi_info", category = "info"),
+        ActionItem("\uD83D\uDC7E", "معلومات الشبكة", "get_network_info", category = "info"),
+        ActionItem("\uD83D\uDDA5", "معلومات التخزين", "get_storage_info", category = "info"),
+        ActionItem("\uD83D\uDCCE", "معلومات SIM", "get_sim_info", category = "info"),
+        ActionItem("\uD83D\uDCDA", "التطبيقات المثبتة", "get_installed_apps", category = "info"),
+        ActionItem("\u26A1", "التطبيقات المشغلة", "get_running_apps", category = "info"),
+        ActionItem("\uD83D\uDD34", "رقم IMEI", "get_imei", category = "info")
     )
 
     fun getCameraActions(): List<ActionItem> = listOf(
-        ActionItem("screenshot", "لقطة شاشة", "screenshot", category = "camera"),
-        ActionItem("front", "الكاميرا الأمامية", "front_camera", category = "camera"),
-        ActionItem("rear", "الكاميرا الخلفية", "back_camera", category = "camera"),
-        ActionItem("video", "تسجيل فيديو", "record_video", category = "camera")
+        ActionItem("\uD83D\uDCF8", "لقطة شاشة", "screenshot", category = "camera"),
+        ActionItem("\uD83D\uDC68\u200D\uD83C\uDFA8", "الكاميرا الأمامية", "front_camera", category = "camera"),
+        ActionItem("\uD83D\uDCF7", "الكاميرا الخلفية", "back_camera", category = "camera"),
+        ActionItem("\uD83C\uDFA5", "تسجيل فيديو", "record_video", category = "camera")
     )
 
     fun getConnectivityActions(): List<ActionItem> = listOf(
-        ActionItem("wifi_on", "تشغيل WiFi", "enable_wifi", category = "connectivity"),
-        ActionItem("wifi_off", "إيقاف WiFi", "disable_wifi", category = "connectivity"),
-        ActionItem("bt_on", "تشغيل البلوتوث", "enable_bluetooth", category = "connectivity"),
-        ActionItem("bt_off", "إيقاف البلوتوث", "disable_bluetooth", category = "connectivity"),
-        ActionItem("airplane_on", "وضع الطيران", "airplane_on", category = "connectivity"),
-        ActionItem("airplane_off", "إلغاء الطيران", "airplane_off", category = "connectivity"),
-        ActionItem("mobile_data_on", "تشغيل البيانات", "enable_mobile_data", category = "connectivity"),
-        ActionItem("mobile_data_off", "إيقاف البيانات", "disable_mobile_data", category = "connectivity"),
-        ActionItem("hotspot_on", "تشغيل نقطة الاتصال", "enable_hotspot", category = "connectivity"),
-        ActionItem("hotspot_off", "إيقاف نقطة الاتصال", "disable_hotspot", category = "connectivity")
+        ActionItem("\uD83D\uDEA7", "تشغيل WiFi", "enable_wifi", category = "connectivity"),
+        ActionItem("\uD83D\uDEAB", "إيقاف WiFi", "disable_wifi", category = "connectivity"),
+        ActionItem("\uD83D\uDCDF", "تشغيل البلوتوث", "enable_bluetooth", category = "connectivity"),
+        ActionItem("\u274C", "إيقاف البلوتوث", "disable_bluetooth", category = "connectivity"),
+        ActionItem("\u2708", "وضع الطيران", "airplane_on", category = "connectivity"),
+        ActionItem("\uD83D\uDE49", "إلغاء الطيران", "airplane_off", category = "connectivity"),
+        ActionItem("\uD83D\uDCFB", "تشغيل البيانات", "enable_mobile_data", category = "connectivity"),
+        ActionItem("\uD83D\uDEAB", "إيقاف البيانات", "disable_mobile_data", category = "connectivity"),
+        ActionItem("\uD83D\uDD11", "تشغيل نقطة الاتصال", "enable_hotspot", category = "connectivity"),
+        ActionItem("\uD83D\uDD12", "إيقاف نقطة الاتصال", "disable_hotspot", category = "connectivity")
     )
 
     fun getAlertActions(): List<ActionItem> = listOf(
-        ActionItem("ring", "تشغيل الرنين", "ring", category = "alert"),
-        ActionItem("vibrate", "اهتزاز", "vibrate", category = "alert"),
-        ActionItem("sound", "تشغيل صوت", "play_sound", category = "alert"),
-        ActionItem("speak", "نطق نص", "speak_text", category = "alert"),
-        ActionItem("notify", "إشعار تجريبي", "show_notification", category = "alert"),
-        ActionItem("torch_on", "تشغيل المصباح", "torch_on", category = "alert"),
-        ActionItem("torch_off", "إيقاف المصباح", "torch_off", category = "alert")
+        ActionItem("\uD83D\uDD14", "تشغيل الرنين", "ring", category = "alert"),
+        ActionItem("\uD83D\uDD23", "اهتزاز", "vibrate", category = "alert"),
+        ActionItem("\uD83D\uDD0A", "تشغيل صوت", "play_sound", category = "alert"),
+        ActionItem("\uD83D\uDDE3", "نطق نص", "speak_text", category = "alert"),
+        ActionItem("\uD83D\uDD14", "إشعار تجريبي", "show_notification", category = "alert"),
+        ActionItem("\uD83D\uDD26", "تشغيل المصباح", "torch_on", category = "alert"),
+        ActionItem("\uD83D\uDD25", "إيقاف المصباح", "torch_off", category = "alert")
     )
 
     fun getSystemActions(): List<ActionItem> = listOf(
-        ActionItem("lock", "قفل الهاتف", "lock_phone", category = "system"),
-        ActionItem("reboot", "إعادة تشغيل", "reboot", category = "system"),
-        ActionItem("power_off", "إيقاف التشغيل", "power_off", category = "system"),
-        ActionItem("calendar", "التقويم", "get_calendar", category = "system"),
-        ActionItem("clipboard_get", "الحافظة", "get_clipboard", category = "system"),
-        ActionItem("volume_up", "رفع الصوت", "volume_up", category = "system"),
-        ActionItem("volume_down", "خفض الصوت", "volume_down", category = "system"),
-        ActionItem("brightness_up", "رفع السطوع", "brightness_up", category = "system"),
-        ActionItem("brightness_down", "خفض السطوع", "brightness_down", category = "system"),
-        ActionItem("screenshot_and_save", "لقطة شاشة + حفظ", "screenshot_save", category = "system")
+        ActionItem("\uD83D\uDD12", "قفل الهاتف", "lock_phone", category = "system"),
+        ActionItem("\uD83D\uDD04", "إعادة تشغيل", "reboot", category = "system"),
+        ActionItem("\u23F9", "إيقاف التشغيل", "power_off", category = "system"),
+        ActionItem("\uD83D\uDCC5", "التقويم", "get_calendar", category = "system"),
+        ActionItem("\uD83D\uDCCB", "الحافظة", "get_clipboard", category = "system"),
+        ActionItem("\uD83D\uDD0A", "رفع الصوت", "volume_up", category = "system"),
+        ActionItem("\uD83D\uDD09", "خفض الصوت", "volume_down", category = "system"),
+        ActionItem("\u2600", "رفع السطوع", "brightness_up", category = "system"),
+        ActionItem("\uD83C\uDF19", "خفض السطوع", "brightness_down", category = "system"),
+        ActionItem("\uD83D\uDCF8", "لقطة شاشة + حفظ", "screenshot_save", category = "system")
     )
 
     fun getSmsCallsActions(): List<ActionItem> = listOf(
-        ActionItem("sms", "الرسائل القصيرة", "get_sms", category = "sms"),
-        ActionItem("calls", "سجل المكالمات", "get_calls", category = "sms"),
-        ActionItem("contacts", "جهات الاتصال", "get_contacts", category = "sms"),
-        ActionItem("notifications", "الإشعارات", "get_notifications", category = "sms"),
-        ActionItem("clipboard", "الحافظة", "get_clipboard", category = "sms"),
-        ActionItem("call_logs_detail", "تفاصيل المكالمات", "get_call_logs_detail", category = "sms")
+        ActionItem("\u2709", "الرسائل القصيرة", "get_sms", category = "sms"),
+        ActionItem("\uD83D\uDCDE", "سجل المكالمات", "get_calls", category = "sms"),
+        ActionItem("\uD83D\uDC65", "جهات الاتصال", "get_contacts", category = "sms"),
+        ActionItem("\uD83D\uDD14", "الإشعارات", "get_notifications", category = "sms"),
+        ActionItem("\uD83D\uDCCB", "الحافظة", "get_clipboard", category = "sms"),
+        ActionItem("\uD83D\uDD0D", "تفاصيل المكالمات", "get_call_logs_detail", category = "sms")
     )
 
     fun getFileActions(): List<ActionItem> = listOf(
-        ActionItem("files", "تصفح الملفات", "list_files", category = "files"),
-        ActionItem("gallery", "الصور والمعرض", "get_gallery", category = "files"),
-        ActionItem("search", "بحث في الملفات", "search_files", category = "files"),
-        ActionItem("recent", "الملفات الأخيرة", "recent_files", category = "files"),
-        ActionItem("download", "تحميل ملف", "download_file", category = "files"),
-        ActionItem("upload", "رفع ملف", "upload_file", category = "files"),
-        ActionItem("delete", "حذف ملف", "delete_file", category = "files")
+        ActionItem("\uD83D\uDCC1", "تصفح الملفات", "list_files", category = "files"),
+        ActionItem("\uD83D\uDBC5", "الصور والمعرض", "get_gallery", category = "files"),
+        ActionItem("\uD83D\uDD0D", "بحث في الملفات", "search_files", category = "files"),
+        ActionItem("\uD83D\uDDC3", "الملفات الأخيرة", "recent_files", category = "files"),
+        ActionItem("\u2B07", "تحميل ملف", "download_file", category = "files"),
+        ActionItem("\u2B06", "رفع ملف", "upload_file", category = "files"),
+        ActionItem("\uD83D\uDDD1", "حذف ملف", "delete_file", category = "files")
     )
 
     fun getSocialAppActions(): List<ActionItem> = listOf(
-        ActionItem("whatsapp", "واتساب", "get_whatsapp", category = "social"),
-        ActionItem("telegram", "تليجرام", "get_telegram", category = "social"),
-        ActionItem("instagram", "إنستجرام", "get_instagram", category = "social"),
-        ActionItem("messenger", "ماسنجر", "get_messenger", category = "social"),
-        ActionItem("snapchat", "سناب شات", "get_snapchat", category = "social"),
-        ActionItem("tiktok", "تيك توك", "get_tiktok", category = "social"),
-        ActionItem("twitter", "تويتر / X", "get_twitter", category = "social"),
-        ActionItem("viber", "فايبر", "get_viber", category = "social"),
-        ActionItem("signal", "سيجنال", "get_signal", category = "social"),
-        ActionItem("facebook", "فيسبوك", "get_facebook", category = "social"),
-        ActionItem("discord", "ديسكورد", "get_discord", category = "social"),
-        ActionItem("line", "لاين", "get_line", category = "social"),
-        ActionItem("skype", "سكايب", "get_skype", category = "social"),
-        ActionItem("youtube", "يوتيوب", "get_youtube", category = "social")
+        ActionItem("\uD83D\uDCAC", "واتساب", "get_whatsapp", category = "social"),
+        ActionItem("\u2708", "تليجرام", "get_telegram", category = "social"),
+        ActionItem("\uD83D\uDCF8", "إنستجرام", "get_instagram", category = "social"),
+        ActionItem("\uD83D\uDCAC", "ماسنجر", "get_messenger", category = "social"),
+        ActionItem("\uD83D\uDCAB", "سناب شات", "get_snapchat", category = "social"),
+        ActionItem("\uD83C\uDFB5", "تيك توك", "get_tiktok", category = "social"),
+        ActionItem("\uD83D\uDD4A", "تويتر / X", "get_twitter", category = "social"),
+        ActionItem("\uD83D\uDCF2", "فايبر", "get_viber", category = "social"),
+        ActionItem("\uD83D\uDD35", "سيجنال", "get_signal", category = "social"),
+        ActionItem("\uD83D\uDCD8", "فيسبوك", "get_facebook", category = "social"),
+        ActionItem("\uD83C\uDFAE", "ديسكورد", "get_discord", category = "social"),
+        ActionItem("\uD83C\uDDF1", "لاين", "get_line", category = "social"),
+        ActionItem("\uD83C\uDF10", "سكايب", "get_skype", category = "social"),
+        ActionItem("\uD83D\uDCFA", "يوتيوب", "get_youtube", category = "social")
     )
 
     fun getAllControlActions(): List<ActionItem> = listOf(
-        ActionItem("header", "معلومات الجهاز", "", category = "section"),
+        ActionItem("", "معلومات الجهاز", "", category = "section"),
         *getDeviceInfoActions().toTypedArray(),
-        ActionItem("header", "الكاميرا والصور", "", category = "section"),
+        ActionItem("", "الكاميرا والصور", "", category = "section"),
         *getCameraActions().toTypedArray(),
-        ActionItem("header", "الاتصال", "", category = "section"),
+        ActionItem("", "الاتصالات", "", category = "section"),
         *getConnectivityActions().toTypedArray(),
-        ActionItem("header", "التنبيهات", "", category = "section"),
+        ActionItem("", "التنبيهات", "", category = "section"),
         *getAlertActions().toTypedArray(),
-        ActionItem("header", "النظام", "", category = "section"),
+        ActionItem("", "النظام", "", category = "section"),
         *getSystemActions().toTypedArray()
     )
 }

@@ -2,6 +2,7 @@ package com.abuzahra.control.ui.main
 
 import android.content.Intent
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.util.Log
 import android.view.Gravity
@@ -37,10 +38,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private lateinit var tvTopTitle: TextView
+    private lateinit var tvTopEmail: TextView
     private lateinit var ivDeviceStatus: View
     private lateinit var tvDeviceCount: TextView
     private lateinit var fragmentContainer: FrameLayout
-    private val navIconLabels = mutableMapOf<Int, TextView>()
+    private val navIconViews = mutableMapOf<Int, TextView>()
+    private val navLabelViews = mutableMapOf<Int, TextView>()
+    private val navContainerViews = mutableMapOf<Int, View>()
     private var currentNavId: Int = R.id.nav_dashboard
     private var resultListener: ValueEventListener? = null
     private val deviceRepository = DeviceRepository()
@@ -48,30 +52,34 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         try {
-            Log.d(TAG, "onCreate")
+            Log.d(TAG, "onCreate - building layout")
             buildLayout()
             setupTopBar()
-            setupBottomNav()
             switchFragment(R.id.nav_dashboard)
         } catch (e: Exception) {
-            Log.e(TAG, "onCreate error: ${e.message}")
+            Log.e(TAG, "onCreate error: ${e.message}", e)
             showToast("خطأ في تهيئة الشاشة: ${e.message}")
         }
     }
 
     override fun onResume() {
         super.onResume()
-        Log.d(TAG, "onResume")
-        refreshDeviceStatus()
+        try {
+            refreshDeviceStatus()
+        } catch (e: Exception) {
+            Log.e(TAG, "onResume error: ${e.message}")
+        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        Log.d(TAG, "onDestroy")
-        removeResultListener()
+        try {
+            removeResultListener()
+        } catch (_: Exception) {}
     }
 
     private fun buildLayout() {
+        // Root vertical layout
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(ColorPalette.BG_PRIMARY.parseColorSafe())
@@ -86,13 +94,14 @@ class MainActivity : AppCompatActivity() {
             orientation = LinearLayout.HORIZONTAL
             setBackgroundColor(ColorPalette.BG_SECONDARY.parseColorSafe())
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(16), dp(4), dp(16), dp(4))
+            setPadding(dp(16), dp(12), dp(16), dp(12))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(56)
+                LinearLayout.LayoutParams.WRAP_CONTENT
             )
         }
 
+        // Top bar left: Title
         tvTopTitle = TextView(this).apply {
             text = "لوحة التحكم"
             setTextColor(ColorPalette.WHITE.parseColorSafe())
@@ -105,7 +114,12 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
+        // Top bar right: Device status indicator
         ivDeviceStatus = View(this).apply {
+            val dot = GradientDrawable()
+            dot.shape = GradientDrawable.OVAL
+            dot.setColor(ColorPalette.TEXT_HINT.parseColorSafe())
+            background = dot
             layoutParams = LinearLayout.LayoutParams(dp(10), dp(10)).apply {
                 marginEnd = dp(6)
             }
@@ -115,27 +129,77 @@ class MainActivity : AppCompatActivity() {
             text = "جاهز"
             setTextColor(ColorPalette.TEXT_SECONDARY.parseColorSafe())
             textSize = 12f
+        }
+
+        // Email text below title
+        tvTopEmail = TextView(this).apply {
+            text = ""
+            setTextColor(ColorPalette.TEXT_HINT.parseColorSafe())
+            textSize = 10f
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        val topContent = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        }
+        topContent.addView(tvTopTitle)
+        topContent.addView(tvTopEmail)
+
+        val topRight = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
         }
+        topRight.addView(ivDeviceStatus)
+        topRight.addView(tvDeviceCount)
 
-        topBar.addView(tvTopTitle)
-        topBar.addView(ivDeviceStatus)
-        topBar.addView(tvDeviceCount)
+        topBar.addView(topContent)
+        topBar.addView(topRight)
 
         // ── Fragment Container ──
+        // CRITICAL FIX: Width must be MATCH_PARENT, height=0 with weight=1
         fragmentContainer = FrameLayout(this).apply {
             id = R.id.fragmentContainer
             layoutParams = LinearLayout.LayoutParams(
-                0,
-                0,
-                1f
+                LinearLayout.LayoutParams.MATCH_PARENT,  // Width = MATCH_PARENT (was 0!)
+                0,                                         // Height = 0
+                1f                                         // Weight = 1 (fills remaining space)
             )
         }
 
-        // ── Divider ──
+        // ── Bottom Navigation Bar ──
+        val bottomNav = buildBottomNav()
+
+        // Assemble
+        root.addView(topBar)
+        root.addView(fragmentContainer)
+        root.addView(bottomNav)
+
+        setContentView(root)
+    }
+
+    private fun buildBottomNav(): View {
+        val navContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(ColorPalette.BG_SECONDARY.parseColorSafe())
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        // Divider line above nav
         val divider = View(this).apply {
             setBackgroundColor(ColorPalette.DIVIDER.parseColorSafe())
             layoutParams = LinearLayout.LayoutParams(
@@ -143,11 +207,11 @@ class MainActivity : AppCompatActivity() {
                 1
             )
         }
+        navContainer.addView(divider)
 
-        // ── Bottom Nav Bar ──
-        val bottomNav = LinearLayout(this).apply {
+        // Nav buttons row
+        val navRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            setBackgroundColor(ColorPalette.BG_SECONDARY.parseColorSafe())
             gravity = Gravity.CENTER
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -173,9 +237,14 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
+            // Icon text (single letter with circle background)
+            val iconBg = GradientDrawable()
+            iconBg.shape = GradientDrawable.OVAL
+            iconBg.setColor(ColorPalette.TRANSPARENT.parseColorSafe())
+
             val iconView = TextView(this).apply {
                 text = item.icon
-                textSize = 18f
+                textSize = 20f
                 setTextColor(ColorPalette.TEXT_HINT.parseColorSafe())
                 gravity = Gravity.CENTER
                 layoutParams = LinearLayout.LayoutParams(
@@ -186,7 +255,7 @@ class MainActivity : AppCompatActivity() {
 
             val labelView = TextView(this).apply {
                 text = item.label
-                textSize = 9f
+                textSize = 10f
                 setTextColor(ColorPalette.TEXT_HINT.parseColorSafe())
                 gravity = Gravity.CENTER
                 layoutParams = LinearLayout.LayoutParams(
@@ -199,55 +268,59 @@ class MainActivity : AppCompatActivity() {
 
             navItemView.addView(iconView)
             navItemView.addView(labelView)
-            bottomNav.addView(navItemView)
+            navRow.addView(navItemView)
 
-            // Store the label (or icon) for highlight updates — store both icon + label
-            // Use icon as the key indicator since label is also needed
-            navIconLabels[item.id] = iconView
-            // Store label separately with a different key pattern
-            navIconLabels[item.id + 10000] = labelView
+            navIconViews[item.id] = iconView
+            navLabelViews[item.id] = labelView
+            navContainerViews[item.id] = navItemView
         }
 
-        root.addView(topBar)
-        root.addView(fragmentContainer)
-        root.addView(divider)
-        root.addView(bottomNav)
-
-        setContentView(root)
+        navContainer.addView(navRow)
+        return navContainer
     }
 
     private fun setupTopBar() {
         try {
             val email = FirebaseManager.userEmail
             if (!email.isNullOrEmpty()) {
-                tvTopTitle.text = email
-            } else {
-                tvTopTitle.text = "لوحة التحكم"
+                tvTopEmail.text = email
             }
+            tvTopTitle.text = "لوحة التحكم"
         } catch (e: Exception) {
             Log.e(TAG, "setupTopBar error: ${e.message}")
-            tvTopTitle.text = "لوحة التحكم"
         }
     }
 
-    private fun setupBottomNav() {
-        updateNavHighlight(R.id.nav_dashboard)
-    }
-
-    fun updateNavHighlight(selectedId: Int) {
+    private fun updateNavHighlight(selectedId: Int) {
         currentNavId = selectedId
         for (item in NavItems.items) {
             val isSelected = item.id == selectedId
             val color = if (isSelected) ColorPalette.PRIMARY.parseColorSafe()
                         else ColorPalette.TEXT_HINT.parseColorSafe()
-            navIconLabels[item.id]?.setTextColor(color)
-            navIconLabels[item.id + 10000]?.setTextColor(color)
+
+            navIconViews[item.id]?.setTextColor(color)
+            navLabelViews[item.id]?.setTextColor(color)
+
+            // Highlight background for selected item
+            val bgView = navContainerViews[item.id]
+            if (bgView != null) {
+                if (isSelected) {
+                    val selBg = GradientDrawable()
+                    selBg.shape = GradientDrawable.RECTANGLE
+                    selBg.setColor(ColorPalette.TRANSPARENT.parseColorSafe())
+                    selBg.cornerRadius = dp(8).toFloat()
+                    bgView.background = selBg
+                } else {
+                    bgView.background = null
+                }
+            }
         }
     }
 
     fun switchFragment(itemId: Int) {
         try {
-            if (fragmentContainer == null) return
+            if (!::fragmentContainer.isInitialized) return
+            Log.d(TAG, "switchFragment: $itemId")
             val fragment: Fragment = when (itemId) {
                 R.id.nav_dashboard -> DashboardFragment()
                 R.id.nav_control -> ControlFragment()
@@ -262,19 +335,20 @@ class MainActivity : AppCompatActivity() {
                 .commitAllowingStateLoss()
             updateNavHighlight(itemId)
         } catch (e: Exception) {
-            Log.e(TAG, "switchFragment error: ${e.message}")
+            Log.e(TAG, "switchFragment error: ${e.message}", e)
         }
     }
 
     fun selectDevice(device: Device) {
         try {
             selectedDevice = device
-            tvTopTitle.text = device.name.ifEmpty { FirebaseManager.userEmail ?: "لوحة التحكم" }
+            tvTopTitle.text = device.name.ifEmpty { "جهاز" }
             tvDeviceCount.text = device.statusText
+            tvTopEmail.text = "${device.model} ${device.brand}"
 
             // Update status dot
-            val dotDrawable = android.graphics.drawable.GradientDrawable()
-            dotDrawable.shape = android.graphics.drawable.GradientDrawable.OVAL
+            val dotDrawable = GradientDrawable()
+            dotDrawable.shape = GradientDrawable.OVAL
             dotDrawable.setColor(
                 if (device.isOnline) ColorPalette.SUCCESS.parseColorSafe()
                 else ColorPalette.ERROR.parseColorSafe()
@@ -285,7 +359,10 @@ class MainActivity : AppCompatActivity() {
             removeResultListener()
             resultListener = deviceRepository.listenForResult(device.id) { result ->
                 try {
-                    showToast("نتيجة: ${result.result}")
+                    val msg = result.result
+                    if (msg.isNotEmpty()) {
+                        showToast("نتيجة: $msg")
+                    }
                 } catch (e: Exception) {
                     Log.e(TAG, "Result callback error: ${e.message}")
                 }
@@ -321,13 +398,20 @@ class MainActivity : AppCompatActivity() {
             val device = selectedDevice
             if (device != null) {
                 tvDeviceCount.text = device.statusText
-                val dotDrawable = android.graphics.drawable.GradientDrawable()
-                dotDrawable.shape = android.graphics.drawable.GradientDrawable.OVAL
+                val dotDrawable = GradientDrawable()
+                dotDrawable.shape = GradientDrawable.OVAL
                 dotDrawable.setColor(
                     if (device.isOnline) ColorPalette.SUCCESS.parseColorSafe()
                     else ColorPalette.ERROR.parseColorSafe()
                 )
                 ivDeviceStatus.background = dotDrawable
+            } else {
+                ivDeviceStatus.background = null
+                val dotDrawable = GradientDrawable()
+                dotDrawable.shape = GradientDrawable.OVAL
+                dotDrawable.setColor(ColorPalette.TEXT_HINT.parseColorSafe())
+                ivDeviceStatus.background = dotDrawable
+                tvDeviceCount.text = "لا يوجد جهاز"
             }
         } catch (e: Exception) {
             Log.e(TAG, "refreshDeviceStatus error: ${e.message}")
@@ -340,8 +424,6 @@ class MainActivity : AppCompatActivity() {
             val device = selectedDevice ?: return
             deviceRepository.removeResultListener(device.id, listener)
             resultListener = null
-        } catch (e: Exception) {
-            Log.e(TAG, "removeResultListener error: ${e.message}")
-        }
+        } catch (_: Exception) {}
     }
 }

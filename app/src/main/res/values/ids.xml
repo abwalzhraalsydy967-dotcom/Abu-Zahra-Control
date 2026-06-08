@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item type="id" name="fragmentContainer" />
+    <item type="id" name="nav_dashboard" />
+    <item type="id" name="nav_control" />
+    <item type="id" name="nav_sms_calls" />
+    <item type="id" name="nav_files" />
+    <item type="id" name="nav_social" />
+    <item type="id" name="nav_settings" />
+</resources>

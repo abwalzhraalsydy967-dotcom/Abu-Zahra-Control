@@ -1,25 +1,17 @@
 package com.abuzahra.control.ui.smscalls
 
-import android.graphics.Typeface
-import android.os.Bundle
 import android.util.Log
-import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.FrameLayout
 import android.widget.LinearLayout
-import android.widget.TextView
 import androidx.fragment.app.Fragment
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.abuzahra.control.constants.ColorPalette
-import com.abuzahra.control.data.model.ActionItem
 import com.abuzahra.control.data.repository.CommandRepository
 import com.abuzahra.control.ui.main.MainActivity
 import com.abuzahra.control.util.ViewUtils
 import com.abuzahra.control.util.dp
-import com.abuzahra.control.util.parseColorSafe
+import com.abuzahra.control.util.showToast
 
 class SmsCallsFragment : Fragment() {
 
@@ -27,7 +19,7 @@ class SmsCallsFragment : Fragment() {
         const val TAG = "SmsCallsFragment"
     }
 
-    private lateinit var rvActions: RecyclerView
+    private lateinit var contentContainer: LinearLayout
     private val commandRepository = CommandRepository()
 
     override fun onCreateView(
@@ -38,10 +30,8 @@ class SmsCallsFragment : Fragment() {
         return try {
             buildView()
         } catch (e: Exception) {
-            Log.e(TAG, "onCreateView error: ${e.message}")
-            View(requireContext()).apply {
-                setBackgroundColor(ColorPalette.BG_PRIMARY.parseColorSafe())
-            }
+            Log.e(TAG, "onCreateView error: ${e.message}", e)
+            createErrorView("خطأ في تحميل الرسائل")
         }
     }
 
@@ -50,7 +40,17 @@ class SmsCallsFragment : Fragment() {
         try {
             setupActions()
         } catch (e: Exception) {
-            Log.e(TAG, "onViewCreated error: ${e.message}")
+            Log.e(TAG, "onViewCreated error: ${e.message}", e)
+        }
+    }
+
+    private fun createErrorView(message: String): View {
+        val ctx = requireContext()
+        return ViewUtils.createEmptyStateView(ctx, message, "إعادة المحاولة") {
+            try {
+                contentContainer.removeAllViews()
+                setupActions()
+            } catch (_: Exception) {}
         }
     }
 
@@ -58,138 +58,90 @@ class SmsCallsFragment : Fragment() {
         val ctx = requireContext()
         val scrollView = ViewUtils.createScrollView(ctx)
 
-        val container = ViewUtils.createVerticalLayout(ctx).apply {
+        contentContainer = ViewUtils.createVerticalLayout(ctx).apply {
             setBackgroundColor(ColorPalette.BG_PRIMARY.parseColorSafe())
             setPadding(dp(16), dp(16), dp(16), dp(16))
         }
 
-        val tvSectionTitle = ViewUtils.createTitleText(
-            ctx,
-            "الرسائل والمكالمات",
-            sizeSp = 18f,
-            color = ColorPalette.TEXT_PRIMARY
-        )
+        // Title
+        val title = ViewUtils.createTitleText(ctx, "الرسائل والمكالمات", 20f, ColorPalette.TEXT_PRIMARY)
 
-        rvActions = RecyclerView(ctx).apply {
-            layoutManager = LinearLayoutManager(ctx)
+        // No device warning
+        val noDeviceWarning = createNoDeviceWarning(ctx)
+
+        contentContainer.addView(title)
+        contentContainer.addView(noDeviceWarning)
+
+        scrollView.addView(contentContainer)
+        return scrollView
+    }
+
+    private fun createNoDeviceWarning(ctx: android.content.Context): LinearLayout {
+        return LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            val cardBg = android.graphics.drawable.GradientDrawable()
+            cardBg.cornerRadius = dp(12).toFloat()
+            cardBg.setColor(ColorPalette.BG_CARD.parseColorSafe())
+            background = cardBg
+            setPadding(dp(16), dp(12), dp(16), dp(12))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
-                topMargin = dp(12)
+                topMargin = dp(8)
+                bottomMargin = dp(8)
             }
+
+            addView(android.widget.TextView(ctx).apply {
+                text = "\u26A0"
+                textSize = 18f
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { marginEnd = dp(8) }
+            })
+            addView(android.widget.TextView(ctx).apply {
+                text = "لم يتم اختيار جهاز - اختر جهازاً من تبويب الرئيسية"
+                setTextColor(ColorPalette.WARNING.parseColorSafe())
+                textSize = 13f
+            })
         }
-
-        container.addView(tvSectionTitle)
-        container.addView(rvActions)
-
-        scrollView.addView(container)
-        return scrollView
     }
 
     private fun setupActions() {
         try {
             val actions = commandRepository.getSmsCallsActions()
-            val adapter = ActionListAdapter(actions) { action ->
-                try {
-                    (activity as? MainActivity)?.sendCommand(action.command, action.params)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Action click error: ${e.message}")
-                }
-            }
-            rvActions.adapter = adapter
-        } catch (e: Exception) {
-            Log.e(TAG, "setupActions error: ${e.message}")
-        }
-    }
 
-    // ── Reusable action list adapter ──
-    private class ActionListAdapter(
-        private val items: List<ActionItem>,
-        private val onActionClick: (ActionItem) -> Unit
-    ) : RecyclerView.Adapter<ActionListAdapter.ViewHolder>() {
-
-        class ViewHolder(
-            itemView: View,
-            val iconText: TextView,
-            val nameText: TextView
-        ) : RecyclerView.ViewHolder(itemView)
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            val ctx = parent.context
-            val card = android.graphics.drawable.GradientDrawable()
-            card.cornerRadius = ctx.dp(12).toFloat()
-            card.setColor(ColorPalette.BG_CARD.parseColorSafe())
-
-            val itemLayout = LinearLayout(ctx).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                setPadding(ctx.dp(16), ctx.dp(14), ctx.dp(16), ctx.dp(14))
-                background = card
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    setMargins(0, ctx.dp(4), 0, ctx.dp(4))
-                }
-            }
-
-            val iconCircle = FrameLayout(ctx).apply {
-                val iconBg = android.graphics.drawable.GradientDrawable()
-                iconBg.shape = android.graphics.drawable.GradientDrawable.OVAL
-                iconBg.setColor(ColorPalette.BG_INPUT.parseColorSafe())
-                background = iconBg
-                layoutParams = LinearLayout.LayoutParams(ctx.dp(40), ctx.dp(40))
-            }
-
-            val iconText = TextView(ctx).apply {
-                textSize = 16f
-                setTextColor(ColorPalette.PRIMARY.parseColorSafe())
-                typeface = Typeface.DEFAULT_BOLD
-                gravity = Gravity.CENTER
-                layoutParams = FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                    Gravity.CENTER
+            for (action in actions) {
+                val card = ViewUtils.createActionCard(
+                    requireContext(), action.icon, action.name
                 )
-            }
-            iconCircle.addView(iconText)
-
-            val nameText = TextView(ctx).apply {
-                textSize = 14f
-                setTextColor(ColorPalette.TEXT_PRIMARY.parseColorSafe())
-                layoutParams = LinearLayout.LayoutParams(
-                    0,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    1f
-                ).apply {
-                    marginStart = ctx.dp(14)
+                card.setOnClickListener {
+                    try {
+                        val dev = MainActivity.selectedDevice
+                        if (dev == null) {
+                            showToast("يرجى اختيار جهاز أولاً")
+                            return@setOnClickListener
+                        }
+                        (activity as? MainActivity)?.sendCommand(action.command, action.params)
+                        showToast("تم إرسال: ${action.name}")
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Action click error: ${e.message}")
+                        showToast("خطأ في إرسال الأمر")
+                    }
                 }
+                contentContainer.addView(card)
             }
 
-            val arrow = TextView(ctx).apply {
-                text = "›"
-                textSize = 20f
-                setTextColor(ColorPalette.TEXT_HINT.parseColorSafe())
-                gravity = Gravity.CENTER
-            }
-
-            itemLayout.addView(iconCircle)
-            itemLayout.addView(nameText)
-            itemLayout.addView(arrow)
-
-            return ViewHolder(itemLayout, iconText, nameText)
+            // Bottom spacing
+            contentContainer.addView(View(requireContext()).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, dp(32)
+                )
+            })
+        } catch (e: Exception) {
+            Log.e(TAG, "setupActions error: ${e.message}", e)
         }
-
-        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            val action = items[position]
-            holder.iconText.text = action.icon
-            holder.nameText.text = action.name
-            holder.itemView.setOnClickListener {
-                try { onActionClick(action) } catch (_: Exception) {}
-            }
-        }
-
-        override fun getItemCount(): Int = items.size
     }
 }
