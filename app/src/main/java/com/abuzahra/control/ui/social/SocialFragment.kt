@@ -1,7 +1,6 @@
 package com.abuzahra.control.ui.social
 
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -28,20 +27,17 @@ class SocialFragment : Fragment() {
         ActionItem("🔵", "فيسبوك", "get_facebook")
     )
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         return inflater.inflate(R.layout.fragment_generic, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        try {
-            val tvSectionTitle: TextView = view.findViewById(R.id.tvSectionTitle)
-            val rvActions: RecyclerView = view.findViewById(R.id.rvActions)
-            tvSectionTitle.text = "💬 التطبيقات الاجتماعية"
-            rvActions.layoutManager = LinearLayoutManager(requireContext())
-            rvActions.adapter = ActionAdapter(actions) { a ->
-                (activity as? MainActivity)?.sendCommand(a.command)
-            }
-        } catch (e: Exception) { Log.e("Social", "onViewCreated: ${e.message}") }
+        view.findViewById<TextView>(R.id.tvSectionTitle).text = "💬 التطبيقات الاجتماعية"
+        val rv = view.findViewById<RecyclerView>(R.id.rvActions)
+        rv.layoutManager = LinearLayoutManager(requireContext())
+        rv.adapter = ActionAdapter(actions) { a ->
+            (activity as? MainActivity)?.sendCommand(a.command)
+        }
     }
 }

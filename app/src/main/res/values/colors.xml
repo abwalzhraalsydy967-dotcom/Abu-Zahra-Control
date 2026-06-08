@@ -2,8 +2,6 @@
 <resources>
     <color name="primary">#FF6C63FF</color>
     <color name="primary_dark">#FF5A52E0</color>
-    <color name="primary_light">#FF9C97FF</color>
-    <color name="accent">#FF03DAC6</color>
     <color name="bg_primary">#FF0F0F1A</color>
     <color name="bg_secondary">#FF1A1A2E</color>
     <color name="bg_card">#FF16213E</color>
@@ -12,11 +10,8 @@
     <color name="text_secondary">#FFB0B0CC</color>
     <color name="text_hint">#FF6C6C8A</color>
     <color name="success">#FF4CAF50</color>
-    <color name="warning">#FFFFC107</color>
     <color name="error">#FFFF5252</color>
-    <color name="info">#FF2196F3</color>
-    <color name="gradient_start">#FF6C63FF</color>
-    <color name="gradient_end">#FF3B82F6</color>
     <color name="white">#FFFFFFFF</color>
     <color name="black">#FF000000</color>
+    <color name="transparent">#00000000</color>
 </resources>

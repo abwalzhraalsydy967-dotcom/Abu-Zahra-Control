@@ -1,30 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Abu Zahra Control</string>
-    <string name="login">تسجيل الدخول</string>
-    <string name="register">إنشاء حساب</string>
     <string name="email">البريد الإلكتروني</string>
     <string name="password">كلمة المرور</string>
     <string name="confirm_password">تأكيد كلمة المرور</string>
     <string name="forgot_password">نسيت كلمة المرور؟</string>
-    <string name="no_account">ليس لديك حساب؟</string>
-    <string name="have_account">لديك حساب بالفعل؟</string>
-    <string name="sign_up">تسجيل</string>
     <string name="sign_in">دخول</string>
+    <string name="sign_up">إنشاء حساب</string>
     <string name="login_with_google">تسجيل الدخول بحساب Google</string>
     <string name="or_continue_with">أو تابع باستخدام</string>
+    <string name="no_account">ليس لديك حساب؟</string>
+    <string name="have_account">لديك حساب بالفعل؟</string>
+    <string name="register">إنشاء حساب</string>
+    <string name="login">تسجيل الدخول</string>
     <string name="dashboard">لوحة التحكم</string>
     <string name="control">التحكم</string>
-    <string name="sms_calls">الرسائل والمكالمات</string>
+    <string name="sms_calls">الرسائل</string>
     <string name="files">الملفات</string>
-    <string name="social">التطبيقات الاجتماعية</string>
+    <string name="social">التواصل</string>
     <string name="settings">الإعدادات</string>
     <string name="link_device">ربط جهاز</string>
-    <string name="no_devices">لا توجد أجهزة مرتبطة</string>
+    <string name="no_devices">لا توجد أجهزة مرتبطة بعد</string>
     <string name="logout">تسجيل الخروج</string>
-    <string name="loading">جاري التحميل...</string>
-    <string name="link_code">كود الربط</string>
     <string name="enter_link_code">أدخل كود الربط</string>
-    <string name="link_success">تم ربط الجهاز بنجاح</string>
-    <string name="link_failed">فشل الربط - الكود غير صحيح</string>
+    <string name="welcome">مرحباً بك في Abu Zahra Control</string>
+    <string name="login_subtitle">سجل دخولك للمتابعة</string>
+    <string name="register_subtitle">أنشئ حسابك للبدء</string>
 </resources>

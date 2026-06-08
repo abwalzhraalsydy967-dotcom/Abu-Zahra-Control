@@ -9,106 +9,76 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.abuzahra.control.service.FirebaseService
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInClient
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.firebase.auth.FirebaseAuth
 
 class RegisterActivity : AppCompatActivity() {
-    private var googleClient: GoogleSignInClient? = null
-    private val RC_GOOGLE = 9001
-
-    private lateinit var etEmail: EditText
-    private lateinit var etPassword: EditText
-    private lateinit var etConfirmPassword: EditText
-    private lateinit var btnRegister: Button
-    private lateinit var tvGoLogin: TextView
-    private lateinit var btnGoogleSignIn: Button
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        try {
-            setContentView(R.layout.activity_register)
-            etEmail = findViewById(R.id.etEmail)
-            etPassword = findViewById(R.id.etPassword)
-            etConfirmPassword = findViewById(R.id.etConfirmPassword)
-            btnRegister = findViewById(R.id.btnRegister)
-            tvGoLogin = findViewById(R.id.tvGoLogin)
-            btnGoogleSignIn = findViewById(R.id.btnGoogleSignIn)
-        } catch (e: Exception) {
-            Log.e("Register", "Setup error: ${e.message}")
-            e.printStackTrace()
-            finish()
-            return
-        }
+        setContentView(R.layout.activity_register)
+        Log.d("Register", "onCreate - layout set OK")
 
-        try {
-            val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken("787676787951-20uf0a81hb0n5b95t9htb7cd073lu2bm.apps.googleusercontent.com")
-                .requestEmail().build()
-            googleClient = GoogleSignIn.getClient(this, gso)
-        } catch (e: Exception) { Log.w("Register", "Google SI: ${e.message}") }
+        val etEmail = findViewById<EditText>(R.id.etEmail)
+        val etPassword = findViewById<EditText>(R.id.etPassword)
+        val etConfirmPassword = findViewById<EditText>(R.id.etConfirmPassword)
+        val btnRegister = findViewById<Button>(R.id.btnRegister)
+        val tvGoLogin = findViewById<TextView>(R.id.tvGoLogin)
+        val btnGoogleSignIn = findViewById<Button>(R.id.btnGoogleSignIn)
 
-        try {
-            btnRegister.setOnClickListener { doRegister() }
-            tvGoLogin.setOnClickListener { startActivity(Intent(this, LoginActivity::class.java)); finish() }
-            btnGoogleSignIn.setOnClickListener {
-                try {
-                    googleClient?.let { startActivityForResult(it.signInIntent, RC_GOOGLE) }
-                        ?: Toast.makeText(this, "تسجيل Google غير متاح", Toast.LENGTH_SHORT).show()
-                } catch (e: Exception) { Toast.makeText(this, "تأكد من خدمات Google", Toast.LENGTH_SHORT).show() }
-            }
-        } catch (e: Exception) { Log.e("Register", "UI: ${e.message}") }
-    }
-
-    private fun doRegister() {
-        try {
+        btnRegister.setOnClickListener {
             val email = etEmail.text.toString().trim()
             val pass = etPassword.text.toString()
             val confirm = etConfirmPassword.text.toString()
-            if (email.isEmpty() || pass.isEmpty()) { Toast.makeText(this, "أكمل الحقول", Toast.LENGTH_SHORT).show(); return }
-            if (!email.contains("@") || !email.contains(".")) { Toast.makeText(this, "بريد غير صحيح", Toast.LENGTH_SHORT).show(); return }
-            if (pass != confirm) { Toast.makeText(this, "كلمتا المرور غير متطابقتين", Toast.LENGTH_SHORT).show(); return }
-            if (pass.length < 6) { Toast.makeText(this, "كلمة المرور 6 أحرف على الأقل", Toast.LENGTH_SHORT).show(); return }
+
+            if (email.isEmpty() || pass.isEmpty()) {
+                Toast.makeText(this, "أكمل الحقول", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            if (!email.contains("@") || !email.contains(".")) {
+                Toast.makeText(this, "بريد غير صحيح", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            if (pass != confirm) {
+                Toast.makeText(this, "كلمتا المرور غير متطابقتين", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            if (pass.length < 6) {
+                Toast.makeText(this, "كلمة المرور 6 أحرف على الأقل", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
 
             btnRegister.isEnabled = false
             btnRegister.text = "جاري التحميل..."
 
             FirebaseService.signUp(email, pass) { ok, err ->
-                runOnUiThread {
-                    try { btnRegister.isEnabled = true; btnRegister.text = "تسجيل" } catch (_: Exception) {}
-                    if (ok) {
-                        Toast.makeText(this, "تم إنشاء الحساب ✅", Toast.LENGTH_SHORT).show()
-                        goToMain()
-                    } else {
-                        Toast.makeText(this, err ?: "فشل", Toast.LENGTH_LONG).show()
-                    }
+                btnRegister.isEnabled = true
+                btnRegister.text = "إنشاء حساب"
+                if (ok) {
+                    Toast.makeText(this, "تم إنشاء الحساب ✅", Toast.LENGTH_SHORT).show()
+                    openMain()
+                } else {
+                    Toast.makeText(this, err ?: "فشل", Toast.LENGTH_LONG).show()
                 }
             }
-        } catch (e: Exception) { Log.e("Register", "doRegister: ${e.message}"); Toast.makeText(this, "خطأ: ${e.message}", Toast.LENGTH_LONG).show() }
-    }
+        }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == RC_GOOGLE) {
-            try {
-                val task = GoogleSignIn.getSignedInAccountFromIntent(data)
-                val account = task.result
-                val cred = com.google.firebase.auth.GoogleAuthProvider.getCredential(account.idToken, null)
-                FirebaseAuth.getInstance().signInWithCredential(cred)
-                    .addOnCompleteListener { t ->
-                        if (t.isSuccessful) goToMain()
-                        else Toast.makeText(this, "فشل: ${t.exception?.message}", Toast.LENGTH_SHORT).show()
-                    }
-            } catch (e: Exception) { Toast.makeText(this, "فشل Google", Toast.LENGTH_SHORT).show() }
+        tvGoLogin.setOnClickListener {
+            startActivity(Intent(this, LoginActivity::class.java))
+            finish()
+        }
+
+        btnGoogleSignIn.setOnClickListener {
+            Toast.makeText(this, "سجل دخول عبر البريد أولاً ثم اربط حساب Google من الإعدادات", Toast.LENGTH_LONG).show()
         }
     }
 
-    private fun goToMain() {
+    private fun openMain() {
         try {
-            val intent = Intent(this, MainActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            startActivity(intent); finish()
-        } catch (e: Exception) { Log.e("Register", "goToMain: ${e.message}"); Toast.makeText(this, "خطأ: ${e.message}", Toast.LENGTH_LONG).show() }
+            startActivity(Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            })
+            finish()
+        } catch (e: Exception) {
+            Log.e("Register", "openMain: ${e.message}")
+            Toast.makeText(this, "خطأ: ${e.message}", Toast.LENGTH_LONG).show()
+        }
     }
 }
