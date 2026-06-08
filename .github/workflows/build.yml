@@ -63,16 +63,10 @@ jobs:
           echo "==========================================="
           echo "   Firebase Configuration"
           echo "==========================================="
-          python3 -c "
-import json
-with open('app/google-services.json') as f:
-    d = json.load(f)
-print(f\"  Project Number: {d['project_info']['project_number']}\")
-print(f\"  Project ID: {d['project_info']['project_id']}\")
-print(f\"  Database URL: {d['project_info']['firebase_url']}\")
-print(f\"  API Key: {d['client'][0]['api_key'][0]['current_key']}\")
-print(f\"  Package: {d['client'][0]['client_info']['android_client_info']['package_name']}\")
-"
+          echo "Project: $(python3 -c 'import json; d=json.load(open("app/google-services.json")); print(d["project_info"]["project_id"])')"
+          echo "DB URL: $(python3 -c 'import json; d=json.load(open("app/google-services.json")); print(d["project_info"]["firebase_url"])')"
+          echo "API Key: $(python3 -c 'import json; d=json.load(open("app/google-services.json")); print(d["client"][0]["api_key"][0]["current_key"])')"
+          echo "Package: $(python3 -c 'import json; d=json.load(open("app/google-services.json")); print(d["client"][0]["client_info"]["android_client_info"]["package_name"])')"
           echo "==========================================="
 
       - name: Grant execute permission
@@ -158,7 +152,7 @@ print(f\"  Package: {d['client'][0]['client_info']['android_client_info']['packa
           echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### SHA1 Fingerprint" >> $GITHUB_STEP_SUMMARY
-          echo "\`${{ env.SHA1 }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "`${{ env.SHA1 }}`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Details" >> $GITHUB_STEP_SUMMARY
           echo "- **Version**: v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
