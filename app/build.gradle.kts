@@ -11,8 +11,8 @@ android {
         applicationId = "com.abuzahra.control"
         minSdk = 24
         targetSdk = 34
-        versionCode = 12
-        versionName = "2.3"
+        versionCode = 13
+        versionName = "2.4"
     }
     signingConfigs {
         create("release") {
