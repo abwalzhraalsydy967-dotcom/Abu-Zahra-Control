@@ -16,8 +16,8 @@ class DeviceLinkActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         try {
             setContentView(R.layout.activity_device_link)
-        } catch (e: Exception) {
-            Log.e("DeviceLink", "setContentView CRASH: ${e.message}")
+        } catch (t: Throwable) {
+            Log.e("DeviceLink", "setContentView CRASH: ${t.message}")
             finish()
             return
         }
@@ -27,26 +27,32 @@ class DeviceLinkActivity : AppCompatActivity() {
         val tvStatus = findViewById<TextView>(R.id.tvStatus)
 
         btnLink?.setOnClickListener {
-            val code = etCode?.text.toString().trim().uppercase()
-            if (code.isEmpty()) {
-                Toast.makeText(this, "أدخل كود الربط", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            btnLink.isEnabled = false
-            btnLink.text = "جاري التحقق..."
-
-            FirebaseService.linkDevice(code) { ok, msg ->
-                btnLink.isEnabled = true
-                btnLink.text = "ربط جهاز"
-                if (ok) {
-                    tvStatus?.setTextColor(getColor(R.color.success))
-                    tvStatus?.text = msg
-                    Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
-                    Handler(Looper.getMainLooper()).postDelayed({ finish() }, 1500)
-                } else {
-                    tvStatus?.setTextColor(getColor(R.color.error))
-                    tvStatus?.text = msg
+            try {
+                val code = etCode?.text.toString().trim().uppercase()
+                if (code.isEmpty()) {
+                    Toast.makeText(this, "أدخل كود الربط", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
                 }
+                btnLink.isEnabled = false
+                btnLink.text = "جاري التحقق..."
+
+                FirebaseService.linkDevice(code) { ok, msg ->
+                    btnLink?.isEnabled = true
+                    btnLink?.text = "ربط جهاز"
+                    if (ok) {
+                        tvStatus?.setTextColor(getColor(R.color.success))
+                        tvStatus?.text = msg
+                        Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
+                        Handler(Looper.getMainLooper()).postDelayed({ finish() }, 1500)
+                    } else {
+                        tvStatus?.setTextColor(getColor(R.color.error))
+                        tvStatus?.text = msg
+                    }
+                }
+            } catch (t: Throwable) {
+                Log.e("DeviceLink", "Link error: ${t.message}")
+                btnLink?.isEnabled = true
+                btnLink?.text = "ربط جهاز"
             }
         }
     }

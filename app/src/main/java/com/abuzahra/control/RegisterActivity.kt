@@ -15,8 +15,8 @@ class RegisterActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         try {
             setContentView(R.layout.activity_register)
-        } catch (e: Exception) {
-            Log.e("Register", "setContentView CRASH: ${e.message}")
+        } catch (t: Throwable) {
+            Log.e("Register", "setContentView CRASH: ${t.message}")
             finish()
             return
         }
@@ -28,39 +28,45 @@ class RegisterActivity : AppCompatActivity() {
         val tvGoLogin = findViewById<TextView>(R.id.tvGoLogin)
 
         btnRegister?.setOnClickListener {
-            val email = etEmail?.text.toString().trim()
-            val pass = etPassword?.text.toString()
-            val confirm = etConfirmPassword?.text.toString()
+            try {
+                val email = etEmail?.text.toString().trim()
+                val pass = etPassword?.text.toString()
+                val confirm = etConfirmPassword?.text.toString()
 
-            if (email.isEmpty() || pass.isEmpty()) {
-                Toast.makeText(this, "أكمل الحقول", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            if (!email.contains("@") || !email.contains(".")) {
-                Toast.makeText(this, "بريد غير صحيح", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            if (pass != confirm) {
-                Toast.makeText(this, "كلمتا المرور غير متطابقتين", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            if (pass.length < 6) {
-                Toast.makeText(this, "كلمة المرور 6 أحرف على الأقل", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            btnRegister.isEnabled = false
-            btnRegister.text = "جاري التحميل..."
-
-            FirebaseService.signUp(email, pass) { ok, err ->
-                btnRegister.isEnabled = true
-                btnRegister.text = "إنشاء حساب"
-                if (ok) {
-                    Toast.makeText(this, "تم إنشاء الحساب ✅", Toast.LENGTH_SHORT).show()
-                    openMain()
-                } else {
-                    Toast.makeText(this, err ?: "فشل", Toast.LENGTH_LONG).show()
+                if (email.isEmpty() || pass.isEmpty()) {
+                    Toast.makeText(this, "أكمل الحقول", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
                 }
+                if (!email.contains("@") || !email.contains(".")) {
+                    Toast.makeText(this, "بريد غير صحيح", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                if (pass != confirm) {
+                    Toast.makeText(this, "كلمتا المرور غير متطابقتين", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                if (pass.length < 6) {
+                    Toast.makeText(this, "كلمة المرور 6 أحرف على الأقل", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+
+                btnRegister.isEnabled = false
+                btnRegister.text = "جاري التحميل..."
+
+                FirebaseService.signUp(email, pass) { ok, err ->
+                    btnRegister?.isEnabled = true
+                    btnRegister?.text = "إنشاء حساب"
+                    if (ok) {
+                        Toast.makeText(this, "تم إنشاء الحساب", Toast.LENGTH_SHORT).show()
+                        openMain()
+                    } else {
+                        Toast.makeText(this, err ?: "فشل", Toast.LENGTH_LONG).show()
+                    }
+                }
+            } catch (t: Throwable) {
+                Log.e("Register", "Register error: ${t.message}")
+                btnRegister?.isEnabled = true
+                btnRegister?.text = "إنشاء حساب"
             }
         }
 
@@ -76,9 +82,9 @@ class RegisterActivity : AppCompatActivity() {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             })
             finish()
-        } catch (e: Exception) {
-            Log.e("Register", "openMain: ${e.message}")
-            Toast.makeText(this, "خطأ: ${e.message}", Toast.LENGTH_LONG).show()
+        } catch (t: Throwable) {
+            Log.e("Register", "openMain: ${t.javaClass.simpleName}: ${t.message}")
+            Toast.makeText(this, "خطأ: ${t.message}", Toast.LENGTH_LONG).show()
         }
     }
 }

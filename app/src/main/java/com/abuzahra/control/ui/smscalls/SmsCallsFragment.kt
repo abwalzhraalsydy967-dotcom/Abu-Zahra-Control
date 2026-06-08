@@ -26,8 +26,8 @@ class SmsCallsFragment : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return try {
             inflater.inflate(R.layout.fragment_generic, container, false)
-        } catch (e: Exception) {
-            Log.e("SmsCalls", "inflate error: ${e.message}")
+        } catch (t: Throwable) {
+            Log.e("SmsCalls", "inflate error: ${t.message}")
             TextView(requireContext()).apply { text = "خطأ" }
         }
     }
@@ -35,14 +35,14 @@ class SmsCallsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         try {
-            view.findViewById<TextView>(R.id.tvSectionTitle)?.text = "📱 الرسائل والمكالمات"
+            view.findViewById<TextView>(R.id.tvSectionTitle)?.text = "الرسائل والمكالمات"
             val rv = view.findViewById<RecyclerView>(R.id.rvActions)
             rv?.layoutManager = LinearLayoutManager(requireContext())
             rv?.adapter = ActionAdapter(actions) { a ->
-                (activity as? MainActivity)?.sendCommand(a.command)
+                try { (activity as? MainActivity)?.sendCommand(a.command) } catch (_: Throwable) {}
             }
-        } catch (e: Exception) {
-            Log.e("SmsCalls", "onViewCreated error: ${e.message}")
+        } catch (t: Throwable) {
+            Log.e("SmsCalls", "onViewCreated CRASH: ${t.javaClass.simpleName}: ${t.message}")
         }
     }
 }

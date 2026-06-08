@@ -12,11 +12,27 @@ import com.google.firebase.auth.FirebaseAuth
 class SplashActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Check for previous crash and show it
+        try {
+            val prefs = getSharedPreferences("crash_info", MODE_PRIVATE)
+            val crash = prefs.getString("last_crash", null)
+            val crashTime = prefs.getLong("crash_time", 0)
+            // Clear the crash info
+            prefs.edit().remove("last_crash").remove("crash_time").apply()
+
+            if (crash != null && (System.currentTimeMillis() - crashTime) < 60000) {
+                // Show crash info for recent crashes (< 1 min ago)
+                val shortMsg = crash.lines().firstOrNull() ?: "Unknown error"
+                Toast.makeText(this, "خطأ سابق: $shortMsg", Toast.LENGTH_LONG).show()
+                Log.e("Splash", "Previous crash: $shortMsg")
+            }
+        } catch (_: Throwable) {}
+
         try {
             setContentView(R.layout.activity_splash)
-        } catch (e: Exception) {
-            Log.e("Splash", "setContentView failed: ${e.message}")
-            // If layout fails, just finish
+        } catch (t: Throwable) {
+            Log.e("Splash", "setContentView failed: ${t.message}")
             goLogin()
             return
         }
@@ -31,11 +47,11 @@ class SplashActivity : AppCompatActivity() {
                     Log.d("Splash", "No user, go to Login")
                     goLogin()
                 }
-            } catch (e: Exception) {
-                Log.e("Splash", "Auth check failed: ${e.message}")
+            } catch (t: Throwable) {
+                Log.e("Splash", "Auth check failed: ${t.message}")
                 goLogin()
             }
-        }, 1500)
+        }, 2000)
     }
 
     private fun goMain() {
@@ -44,9 +60,9 @@ class SplashActivity : AppCompatActivity() {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             })
             finish()
-        } catch (e: Exception) {
-            Log.e("Splash", "goMain failed: ${e.message}")
-            Toast.makeText(this, "خطأ: ${e.message}", Toast.LENGTH_LONG).show()
+        } catch (t: Throwable) {
+            Log.e("Splash", "goMain failed: ${t.message}")
+            Toast.makeText(this, "خطأ: ${t.message}", Toast.LENGTH_LONG).show()
             goLogin()
         }
     }
@@ -55,8 +71,8 @@ class SplashActivity : AppCompatActivity() {
         try {
             startActivity(Intent(this, LoginActivity::class.java))
             finish()
-        } catch (e: Exception) {
-            Log.e("Splash", "goLogin failed: ${e.message}")
+        } catch (t: Throwable) {
+            Log.e("Splash", "goLogin failed: ${t.message}")
             finish()
         }
     }

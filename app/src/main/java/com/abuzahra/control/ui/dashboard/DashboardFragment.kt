@@ -27,8 +27,8 @@ class DashboardFragment : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return try {
             inflater.inflate(R.layout.fragment_dashboard, container, false)
-        } catch (e: Exception) {
-            Log.e("Dashboard", "inflate error: ${e.message}")
+        } catch (t: Throwable) {
+            Log.e("Dashboard", "inflate error: ${t.javaClass.simpleName}: ${t.message}")
             TextView(requireContext()).apply { text = "خطأ في تحميل الواجهة" }
         }
     }
@@ -43,45 +43,50 @@ class DashboardFragment : Fragment() {
             val btnEmptyLink = view.findViewById<Button>(R.id.btnEmptyLink)
 
             val adapter = DeviceAdapter(emptyList()) { device ->
-                (activity as? MainActivity)?.selectDevice(device)
+                try { (activity as? MainActivity)?.selectDevice(device) } catch (_: Throwable) {}
             }
             rvDevices?.layoutManager = LinearLayoutManager(requireContext())
             rvDevices?.adapter = adapter
 
-            // Set welcome text
             try {
                 val email = FirebaseService.userEmail
                 tvWelcome?.text = if (email != null) "مرحباً، ${email.split("@").firstOrNull()}" else "مرحباً"
-            } catch (_: Exception) {}
+            } catch (_: Throwable) {}
 
-            // Link buttons
             val openLink = View.OnClickListener {
                 try { startActivity(Intent(requireContext(), DeviceLinkActivity::class.java)) }
-                catch (_: Exception) {}
+                catch (_: Throwable) {}
             }
             btnLinkNewDevice?.setOnClickListener(openLink)
             btnEmptyLink?.setOnClickListener(openLink)
 
-            // Observe devices
-            viewLifecycleOwner.lifecycleScope.launch {
-                viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                    FirebaseService.getDevices().collect { devices ->
-                        adapter.update(devices)
-                        if (devices.isEmpty()) {
-                            emptyState?.visibility = View.VISIBLE
-                            rvDevices?.visibility = View.GONE
-                        } else {
-                            emptyState?.visibility = View.GONE
-                            rvDevices?.visibility = View.VISIBLE
-                            if (MainActivity.selectedDevice == null) {
-                                (activity as? MainActivity)?.selectDevice(devices.first())
+            try {
+                viewLifecycleOwner.lifecycleScope.launch {
+                    viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        FirebaseService.getDevices().collect { devices ->
+                            try {
+                                adapter.update(devices)
+                                if (devices.isEmpty()) {
+                                    emptyState?.visibility = View.VISIBLE
+                                    rvDevices?.visibility = View.GONE
+                                } else {
+                                    emptyState?.visibility = View.GONE
+                                    rvDevices?.visibility = View.VISIBLE
+                                    if (MainActivity.selectedDevice == null) {
+                                        try { (activity as? MainActivity)?.selectDevice(devices.first()) } catch (_: Throwable) {}
+                                    }
+                                }
+                            } catch (t: Throwable) {
+                                Log.e("Dashboard", "collect error: ${t.message}")
                             }
                         }
                     }
                 }
+            } catch (t: Throwable) {
+                Log.e("Dashboard", "lifecycleScope error: ${t.javaClass.simpleName}: ${t.message}")
             }
-        } catch (e: Exception) {
-            Log.e("Dashboard", "onViewCreated error: ${e.message}")
+        } catch (t: Throwable) {
+            Log.e("Dashboard", "onViewCreated CRASH: ${t.javaClass.simpleName}: ${t.message}")
         }
     }
 }

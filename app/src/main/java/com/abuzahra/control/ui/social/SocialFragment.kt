@@ -31,8 +31,8 @@ class SocialFragment : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return try {
             inflater.inflate(R.layout.fragment_generic, container, false)
-        } catch (e: Exception) {
-            Log.e("Social", "inflate error: ${e.message}")
+        } catch (t: Throwable) {
+            Log.e("Social", "inflate error: ${t.message}")
             TextView(requireContext()).apply { text = "خطأ" }
         }
     }
@@ -40,14 +40,14 @@ class SocialFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         try {
-            view.findViewById<TextView>(R.id.tvSectionTitle)?.text = "💬 التطبيقات الاجتماعية"
+            view.findViewById<TextView>(R.id.tvSectionTitle)?.text = "التطبيقات الاجتماعية"
             val rv = view.findViewById<RecyclerView>(R.id.rvActions)
             rv?.layoutManager = LinearLayoutManager(requireContext())
             rv?.adapter = ActionAdapter(actions) { a ->
-                (activity as? MainActivity)?.sendCommand(a.command)
+                try { (activity as? MainActivity)?.sendCommand(a.command) } catch (_: Throwable) {}
             }
-        } catch (e: Exception) {
-            Log.e("Social", "onViewCreated error: ${e.message}")
+        } catch (t: Throwable) {
+            Log.e("Social", "onViewCreated CRASH: ${t.javaClass.simpleName}: ${t.message}")
         }
     }
 }

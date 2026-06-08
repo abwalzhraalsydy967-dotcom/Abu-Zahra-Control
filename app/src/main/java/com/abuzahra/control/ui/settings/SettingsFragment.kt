@@ -19,8 +19,8 @@ class SettingsFragment : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return try {
             inflater.inflate(R.layout.fragment_settings, container, false)
-        } catch (e: Exception) {
-            Log.e("Settings", "inflate error: ${e.message}")
+        } catch (t: Throwable) {
+            Log.e("Settings", "inflate error: ${t.message}")
             TextView(requireContext()).apply { text = "خطأ" }
         }
     }
@@ -37,15 +37,15 @@ class SettingsFragment : Fragment() {
             try {
                 tvEmail?.text = FirebaseService.userEmail ?: "غير مسجل"
                 tvUid?.text = "ID: ${FirebaseService.userId?.take(12) ?: "N/A"}"
-            } catch (_: Exception) {}
+            } catch (_: Throwable) {}
 
             btnLinkDevice?.setOnClickListener {
                 try { startActivity(Intent(requireContext(), DeviceLinkActivity::class.java)) }
-                catch (_: Exception) {}
+                catch (_: Throwable) {}
             }
 
             btnAppInfo?.setOnClickListener {
-                Toast.makeText(requireContext(), "Abu Zahra Control v2.1", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), "Abu Zahra Control v2.2", Toast.LENGTH_LONG).show()
             }
 
             btnLogout?.setOnClickListener {
@@ -54,12 +54,12 @@ class SettingsFragment : Fragment() {
                     Toast.makeText(requireContext(), "تم تسجيل الخروج", Toast.LENGTH_SHORT).show()
                     startActivity(Intent(requireContext(), LoginActivity::class.java))
                     activity?.finishAffinity()
-                } catch (e: Exception) {
-                    Toast.makeText(requireContext(), "خطأ: ${e.message}", Toast.LENGTH_SHORT).show()
+                } catch (t: Throwable) {
+                    Toast.makeText(requireContext(), "خطأ: ${t.message}", Toast.LENGTH_SHORT).show()
                 }
             }
-        } catch (e: Exception) {
-            Log.e("Settings", "onViewCreated error: ${e.message}")
+        } catch (t: Throwable) {
+            Log.e("Settings", "onViewCreated CRASH: ${t.javaClass.simpleName}: ${t.message}")
         }
     }
 }
