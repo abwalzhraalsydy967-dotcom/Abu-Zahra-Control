@@ -1,5 +1,7 @@
 package com.abuzahra.control.constants
 
+import com.abuzahra.control.R
+
 object NavItems {
     data class NavItem(val id: Int, val label: String, val icon: String)
     

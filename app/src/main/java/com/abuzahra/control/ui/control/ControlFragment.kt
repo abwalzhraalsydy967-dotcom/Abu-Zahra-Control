@@ -11,7 +11,7 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.abuzahra.control.adapter.ActionAdapter
+// ActionAdapter is inner class below
 import com.abuzahra.control.constants.ColorPalette
 import com.abuzahra.control.data.model.ActionItem
 import com.abuzahra.control.data.repository.CommandRepository
@@ -28,7 +28,9 @@ class ControlFragment : Fragment() {
 
     private lateinit var rvActions: RecyclerView
     private val commandRepository = CommandRepository()
-    private val actionAdapter = ActionAdapter()
+    private val actionAdapter = ControlAdapter(emptyList()) { item ->
+        try { (activity as? MainActivity)?.sendCommand(item.command, item.params) } catch (_: Throwable) {}
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,

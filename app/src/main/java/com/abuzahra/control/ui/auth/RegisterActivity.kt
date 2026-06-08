@@ -8,7 +8,7 @@ import android.view.Gravity
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import com.abuzahra.control.MainActivity
+import com.abuzahra.control.ui.main.MainActivity
 import com.abuzahra.control.constants.ColorPalette
 import com.abuzahra.control.service.FirebaseManager
 import com.abuzahra.control.util.ViewUtils

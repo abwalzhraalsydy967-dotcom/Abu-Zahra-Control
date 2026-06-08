@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Color
 import android.util.TypedValue
 import android.widget.Toast
+import androidx.fragment.app.Fragment
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -20,9 +21,18 @@ fun Context.dp(value: Float): Int {
     ).toInt()
 }
 
+fun Fragment.dp(value: Int): Int = requireContext().dp(value)
+fun Fragment.dp(value: Float): Int = requireContext().dp(value)
+
 fun Context.showToast(message: String, duration: Int = Toast.LENGTH_SHORT) {
     try {
         Toast.makeText(this, message, duration).show()
+    } catch (_: Throwable) {}
+}
+
+fun Fragment.showToast(message: String, duration: Int = Toast.LENGTH_SHORT) {
+    try {
+        requireContext().showToast(message, duration)
     } catch (_: Throwable) {}
 }
 

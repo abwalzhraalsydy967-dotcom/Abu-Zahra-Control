@@ -10,7 +10,7 @@ import android.widget.TextView
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import com.abuzahra.control.MainActivity
+import com.abuzahra.control.ui.main.MainActivity
 import com.abuzahra.control.R
 import com.abuzahra.control.constants.AppConstants
 import com.abuzahra.control.constants.ColorPalette

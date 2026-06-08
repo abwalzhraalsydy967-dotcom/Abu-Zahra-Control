@@ -9,7 +9,7 @@ import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
-import com.abuzahra.control.MainActivity
+import com.abuzahra.control.ui.main.MainActivity
 import com.abuzahra.control.constants.AppConstants
 import com.abuzahra.control.constants.ColorPalette
 import com.abuzahra.control.service.FirebaseManager
