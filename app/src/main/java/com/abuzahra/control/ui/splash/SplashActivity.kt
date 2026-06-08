@@ -18,6 +18,7 @@ import com.abuzahra.control.util.PrefsManager
 import com.abuzahra.control.util.ViewUtils
 import com.abuzahra.control.util.dp
 import com.abuzahra.control.util.showToast
+import com.abuzahra.control.util.parseColorSafe
 
 class SplashActivity : AppCompatActivity() {
 

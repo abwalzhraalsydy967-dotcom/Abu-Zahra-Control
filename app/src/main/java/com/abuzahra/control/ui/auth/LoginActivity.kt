@@ -18,6 +18,7 @@ import com.abuzahra.control.service.FirebaseManager
 import com.abuzahra.control.util.ViewUtils
 import com.abuzahra.control.util.dp
 import com.abuzahra.control.util.showToast
+import com.abuzahra.control.util.parseColorSafe
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions

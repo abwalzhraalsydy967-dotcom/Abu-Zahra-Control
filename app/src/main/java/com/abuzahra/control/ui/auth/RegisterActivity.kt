@@ -15,6 +15,7 @@ import com.abuzahra.control.util.ViewUtils
 import com.abuzahra.control.util.dp
 import com.abuzahra.control.util.isValidEmail
 import com.abuzahra.control.util.showToast
+import com.abuzahra.control.util.parseColorSafe
 
 class RegisterActivity : AppCompatActivity() {
 

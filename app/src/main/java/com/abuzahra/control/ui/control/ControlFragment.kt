@@ -11,6 +11,7 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import android.view.Gravity
 // ActionAdapter is inner class below
 import com.abuzahra.control.constants.ColorPalette
 import com.abuzahra.control.data.model.ActionItem
@@ -128,23 +129,21 @@ class ControlFragment : Fragment() {
         private val onActionClick: (ActionItem) -> Unit
     ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-        companion object {
-            private const val TYPE_HEADER = 0
-            private const val TYPE_ACTION = 1
-        }
+        private val typeHeader = 0
+        private val typeAction = 1
 
         override fun getItemViewType(position: Int): Int {
             return when (items[position]) {
-                is ControlSectionHeader -> TYPE_HEADER
-                is ActionItem -> TYPE_ACTION
-                else -> TYPE_ACTION
+                is ControlSectionHeader -> typeHeader
+                is ActionItem -> typeAction
+                else -> typeAction
             }
         }
 
         override fun onCreateViewHolder(parent: android.view.ViewGroup, viewType: Int): RecyclerView.ViewHolder {
             val ctx = parent.context
             return when (viewType) {
-                TYPE_HEADER -> {
+                typeHeader -> {
                     val tv = TextView(ctx).apply {
                         textSize = 15f
                         typeface = Typeface.DEFAULT_BOLD
