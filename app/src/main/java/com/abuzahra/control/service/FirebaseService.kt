@@ -162,12 +162,12 @@ object FirebaseService {
     }
 
     fun linkDevice(code: String, callback: (Boolean, String?) -> Unit) {
-        val uid = userId ?: return callback(false, "لم يتم تسجيل الدخول")
+        val uid = userId ?: run { callback(false, "لم يتم تسجيل الدخول"); return }
         database.child("linkCodes").child(code).get()
             .addOnSuccessListener { snapshot ->
                 try {
                     if (!snapshot.exists()) { callback(false, "الكود غير صحيح"); return@addOnSuccessListener }
-                    val data = snapshot.value as? Map<*, *> ?: return callback(false, "خطأ")
+                    val data = snapshot.value as? Map<*, *> ?: run { callback(false, "خطأ"); return@addOnSuccessListener }
                     if (data["used"] == true) { callback(false, "الكود مستخدم"); return@addOnSuccessListener }
                     val deviceId = data["deviceId"] as? String ?: ""
                     database.child("linkCodes").child(code).child("used").setValue(true)

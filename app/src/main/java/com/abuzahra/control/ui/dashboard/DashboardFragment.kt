@@ -51,7 +51,7 @@ class DashboardFragment : Fragment() {
         tvWelcome.text = if (email != null) "مرحباً، ${email.split("@").firstOrNull()}" else "مرحباً"
 
         // Link buttons
-        val openLink = {
+        val openLink = View.OnClickListener {
             try { startActivity(Intent(requireContext(), DeviceLinkActivity::class.java)) }
             catch (_: Exception) {}
         }
