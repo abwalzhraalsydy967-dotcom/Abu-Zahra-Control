@@ -3,10 +3,7 @@ package com.abuzahra.control
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
-import android.view.Gravity
 import android.view.View
-import android.widget.FrameLayout
-import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -36,37 +33,34 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         Log.d(TAG, ">>> onCreate START")
 
-        // STEP 1: Try to inflate the layout
         try {
             setContentView(R.layout.activity_main)
             Log.d(TAG, "setContentView OK")
         } catch (t: Throwable) {
             Log.e(TAG, "setContentView CRASH: ${t.javaClass.simpleName}: ${t.message}")
-            // FALLBACK: Create a super simple layout manually
-            try {
-                setContentView(createFallbackLayout())
-                Log.d(TAG, "Fallback layout OK")
-            } catch (t2: Throwable) {
-                Log.e(TAG, "Fallback also crashed: ${t2.message}")
-                Toast.makeText(this, "خطأ حرج: ${t.javaClass.simpleName}", Toast.LENGTH_LONG).show()
-                finish()
-                return
-            }
+            Toast.makeText(this, "خطأ في تحميل الواجهة: ${t.javaClass.simpleName}", Toast.LENGTH_LONG).show()
+            finish()
+            return
         }
 
-        // STEP 2: Find views
         try {
             val bottomNav = findViewById<BottomNavigationView>(R.id.bottomNav)
             val tvTopTitle = findViewById<TextView>(R.id.tvTopTitle)
             val tvDeviceCount = findViewById<TextView>(R.id.tvDeviceCount)
+            val fragmentContainer = findViewById<View>(R.id.fragmentContainer)
+
+            if (fragmentContainer == null) {
+                Log.e(TAG, "fragmentContainer NOT FOUND in layout! This is a critical error.")
+                Toast.makeText(this, "خطأ: الواجهة غير مكتملة", Toast.LENGTH_LONG).show()
+                finish()
+                return
+            }
 
             Log.d(TAG, "All views found OK")
 
-            // STEP 3: Set safe defaults first
             tvTopTitle?.text = "لوحة التحكم"
             tvDeviceCount?.text = "جاهز"
 
-            // STEP 4: Try Firebase init
             try {
                 FirebaseService.init(this)
                 val email = FirebaseService.userEmail
@@ -77,7 +71,6 @@ class MainActivity : AppCompatActivity() {
                 Log.e(TAG, "Firebase init error: ${t.javaClass.simpleName}: ${t.message}")
             }
 
-            // STEP 5: Bottom nav
             bottomNav?.setOnItemSelectedListener { item ->
                 try {
                     switchFragment(item.itemId)
@@ -89,7 +82,6 @@ class MainActivity : AppCompatActivity() {
 
             Log.d(TAG, "BottomNav set OK")
 
-            // STEP 6: Load first fragment with delay to ensure layout is complete
             window.decorView.post {
                 try {
                     switchFragment(R.id.nav_dashboard)
@@ -101,37 +93,18 @@ class MainActivity : AppCompatActivity() {
 
         } catch (t: Throwable) {
             Log.e(TAG, "View setup CRASH: ${t.javaClass.simpleName}: ${t.message}")
-        }
-    }
-
-    /**
-     * Fallback layout if XML inflation fails - creates everything in code
-     */
-    private fun createFallbackLayout(): View {
-        return LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(0xFF0F0F1A.toInt())
-            gravity = Gravity.CENTER
-
-            addView(TextView(this@MainActivity).apply {
-                text = "Abu Zahra Control"
-                setTextColor(0xFFFFFFFF.toInt())
-                textSize = 24f
-                setTextAlignment(View.TEXT_ALIGNMENT_CENTER)
-            })
-
-            addView(TextView(this@MainActivity).apply {
-                text = "لوحة التحكم - جاهز"
-                setTextColor(0xFFB0B0CC.toInt())
-                textSize = 16f
-                setTextAlignment(View.TEXT_ALIGNMENT_CENTER)
-                setPadding(0, 24, 0, 0)
-            })
+            Toast.makeText(this, "خطأ: ${t.javaClass.simpleName}", Toast.LENGTH_LONG).show()
         }
     }
 
     private fun switchFragment(itemId: Int) {
         try {
+            val container = findViewById<View>(R.id.fragmentContainer)
+            if (container == null) {
+                Log.e(TAG, "switchFragment: fragmentContainer is NULL, cannot switch")
+                return
+            }
+
             val frag: Fragment = when (itemId) {
                 R.id.nav_dashboard -> DashboardFragment()
                 R.id.nav_control -> ControlFragment()
@@ -141,9 +114,12 @@ class MainActivity : AppCompatActivity() {
                 R.id.nav_settings -> SettingsFragment()
                 else -> DashboardFragment()
             }
+
             supportFragmentManager.beginTransaction()
                 .replace(R.id.fragmentContainer, frag)
                 .commitAllowingStateLoss()
+
+            Log.d(TAG, "Fragment switched OK: $itemId")
         } catch (t: Throwable) {
             Log.e(TAG, "switchFragment CRASH: ${t.javaClass.simpleName}: ${t.message}")
         }
@@ -165,7 +141,6 @@ class MainActivity : AppCompatActivity() {
             )
         } catch (_: Throwable) {}
 
-        // Listen for results
         try {
             resultListener?.let { currentDevice?.let { d -> FirebaseService.removeResultListener(d.id, it) } }
             resultListener = FirebaseService.listenForResult(device.id) { result ->

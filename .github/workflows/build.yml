@@ -48,7 +48,7 @@ jobs:
           echo "  SHA1 FINGERPRINT"
           echo "  Add this to Firebase Console > Project Settings > Android"
           echo "============================================================"
-          SHA1=$(keytool -list -v -keystore app/abuzahra-release.jks -storepass abuzahra2024 -alias abuzahra 2>&1 | grep SHA1 | awk '{print $2}')
+          SHA1=$(keytool -list -v -keystore app/abuzahra-release.jks -storepass abuzahra2024 -alias abuzahra 2>&1 | grep SHA1 | awk '{print $2}' | tr '[:upper:]' '[:lower:]')
           echo "SHA1=$SHA1"
           echo "SHA1=$SHA1" >> $GITHUB_ENV
           echo "sha1=$SHA1" >> $GITHUB_OUTPUT
@@ -67,7 +67,7 @@ jobs:
           echo "============================================================"
           echo "  All Fingerprints"
           echo "============================================================"
-          keytool -list -v -keystore app/abuzahra-release.jks -storepass abuzahra2024 -alias abuzahra 2>&1 | grep -E "SHA1|SHA256|MD5"
+          keytool -list -v -keystore app/abuzahra-release.jks -storepass abuzahra2024 -alias abuzahra 2>&1 | grep -E "SHA1|SHA256|MD5" | awk '{print tolower($0)}'
           echo "============================================================"
 
       - name: Verify google-services.json

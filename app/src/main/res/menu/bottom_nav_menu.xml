@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:id="@+id/nav_dashboard" android:icon="@android:drawable/ic_menu_today" android:title="@string/dashboard" />
-    <item android:id="@+id/nav_control" android:icon="@android:drawable/ic_menu_manage" android:title="@string/control" />
-    <item android:id="@+id/nav_sms_calls" android:icon="@android:drawable/ic_menu_send" android:title="@string/sms_calls" />
-    <item android:id="@+id/nav_files" android:icon="@android:drawable/ic_menu_gallery" android:title="@string/files" />
-    <item android:id="@+id/nav_social" android:icon="@android:drawable/ic_menu_myplaces" android:title="@string/social" />
-    <item android:id="@+id/nav_settings" android:icon="@android:drawable/ic_menu_preferences" android:title="@string/settings" />
+    <item android:id="@+id/nav_dashboard" android:icon="@drawable/ic_nav_dashboard" android:title="@string/dashboard" />
+    <item android:id="@+id/nav_control" android:icon="@drawable/ic_nav_control" android:title="@string/control" />
+    <item android:id="@+id/nav_sms_calls" android:icon="@drawable/ic_nav_sms" android:title="@string/sms_calls" />
+    <item android:id="@+id/nav_files" android:icon="@drawable/ic_nav_files" android:title="@string/files" />
+    <item android:id="@+id/nav_social" android:icon="@drawable/ic_nav_social" android:title="@string/social" />
+    <item android:id="@+id/nav_settings" android:icon="@drawable/ic_nav_settings" android:title="@string/settings" />
 </menu>
