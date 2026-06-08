@@ -1,12 +1,13 @@
 package com.abuzahra.control.ui.dashboard
 
 import android.content.Intent
+import android.graphics.Typeface
 import android.os.Bundle
 import android.util.Log
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
@@ -15,78 +16,200 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.abuzahra.control.DeviceLinkActivity
-import com.abuzahra.control.MainActivity
 import com.abuzahra.control.R
 import com.abuzahra.control.adapter.DeviceAdapter
-import com.abuzahra.control.service.FirebaseService
+import com.abuzahra.control.constants.ColorPalette
+import com.abuzahra.control.data.model.Device
+import com.abuzahra.control.service.FirebaseManager
+import com.abuzahra.control.ui.device.DeviceLinkActivity
+import com.abuzahra.control.ui.main.MainActivity
+import com.abuzahra.control.util.ViewUtils
+import com.abuzahra.control.util.dp
+import com.abuzahra.control.util.parseColorSafe
 import kotlinx.coroutines.launch
 
 class DashboardFragment : Fragment() {
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+    companion object {
+        const val TAG = "DashboardFragment"
+    }
+
+    private lateinit var tvWelcome: TextView
+    private lateinit var btnLinkNewDevice: View
+    private lateinit var rvDevices: RecyclerView
+    private lateinit var emptyStateContainer: LinearLayout
+    private val deviceAdapter = DeviceAdapter()
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
         return try {
-            inflater.inflate(R.layout.fragment_dashboard, container, false)
-        } catch (t: Throwable) {
-            Log.e("Dashboard", "inflate error: ${t.javaClass.simpleName}: ${t.message}")
-            TextView(requireContext()).apply { text = "خطأ في تحميل الواجهة" }
+            buildView()
+        } catch (e: Exception) {
+            Log.e(TAG, "onCreateView error: ${e.message}")
+            View(requireContext()).apply {
+                setBackgroundColor(ColorPalette.BG_PRIMARY.parseColorSafe())
+            }
         }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         try {
-            val rvDevices = view.findViewById<RecyclerView>(R.id.rvDevices)
-            val emptyState = view.findViewById<LinearLayout>(R.id.emptyState)
-            val tvWelcome = view.findViewById<TextView>(R.id.tvWelcome)
-            val btnLinkNewDevice = view.findViewById<Button>(R.id.btnLinkNewDevice)
-            val btnEmptyLink = view.findViewById<Button>(R.id.btnEmptyLink)
+            setupViews()
+        } catch (e: Exception) {
+            Log.e(TAG, "onViewCreated error: ${e.message}")
+        }
+    }
 
-            val adapter = DeviceAdapter(emptyList()) { device ->
-                try { (activity as? MainActivity)?.selectDevice(device) } catch (_: Throwable) {}
-            }
-            rvDevices?.layoutManager = LinearLayoutManager(requireContext())
-            rvDevices?.adapter = adapter
+    private fun buildView(): View {
+        val ctx = requireContext()
+        val scrollView = ViewUtils.createScrollView(ctx)
 
+        val container = ViewUtils.createVerticalLayout(ctx).apply {
+            setBackgroundColor(ColorPalette.BG_PRIMARY.parseColorSafe())
+            setPadding(dp(16), dp(16), dp(16), dp(16))
+        }
+
+        // Welcome text
+        tvWelcome = TextView(ctx).apply {
+            val email = try { FirebaseManager.userEmail ?: "" } catch (_: Exception) { "" }
+            text = "مرحباً، $email"
+            setTextColor(ColorPalette.PRIMARY.parseColorSafe())
+            textSize = 20f
+            typeface = Typeface.DEFAULT_BOLD
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        // Link new device button
+        btnLinkNewDevice = ViewUtils.createPrimaryButton(ctx, "ربط جهاز") {
             try {
-                val email = FirebaseService.userEmail
-                tvWelcome?.text = if (email != null) "مرحباً، ${email.split("@").firstOrNull()}" else "مرحباً"
-            } catch (_: Throwable) {}
-
-            val openLink = View.OnClickListener {
-                try { startActivity(Intent(requireContext(), DeviceLinkActivity::class.java)) }
-                catch (_: Throwable) {}
+                startActivity(Intent(requireContext(), DeviceLinkActivity::class.java))
+            } catch (e: Exception) {
+                Log.e(TAG, "btnLinkNewDevice click error: ${e.message}")
             }
-            btnLinkNewDevice?.setOnClickListener(openLink)
-            btnEmptyLink?.setOnClickListener(openLink)
+        }
 
-            try {
-                viewLifecycleOwner.lifecycleScope.launch {
-                    viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        FirebaseService.getDevices().collect { devices ->
+        // Section title
+        val sectionTitle = ViewUtils.createTitleText(
+            ctx,
+            "الأجهزة المرتبطة",
+            sizeSp = 16f,
+            color = ColorPalette.TEXT_PRIMARY
+        ).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dp(24)
+            }
+        }
+
+        // RecyclerView
+        rvDevices = RecyclerView(ctx).apply {
+            layoutManager = LinearLayoutManager(ctx)
+            adapter = deviceAdapter
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dp(8)
+            }
+        }
+
+        // Empty state container
+        emptyStateContainer = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(dp(32), dp(48), dp(32), dp(32))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            visibility = View.GONE
+
+            val emptyMsg = TextView(ctx).apply {
+                text = "لا توجد أجهزة مرتبطة بعد"
+                setTextColor(ColorPalette.TEXT_SECONDARY.parseColorSafe())
+                textSize = 15f
+                gravity = Gravity.CENTER
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+            }
+
+            val emptyBtn = ViewUtils.createPrimaryButton(ctx, "ربط جهاز") {
+                try {
+                    startActivity(Intent(requireContext(), DeviceLinkActivity::class.java))
+                } catch (e: Exception) {
+                    Log.e(TAG, "emptyBtn click error: ${e.message}")
+                }
+            }
+
+            addView(emptyMsg)
+            addView(emptyBtn)
+        }
+
+        container.addView(tvWelcome)
+        container.addView(btnLinkNewDevice)
+        container.addView(sectionTitle)
+        container.addView(rvDevices)
+        container.addView(emptyStateContainer)
+
+        scrollView.addView(container)
+        return scrollView
+    }
+
+    private fun setupViews() {
+        try {
+            // Update welcome with email
+            val email = try { FirebaseManager.userEmail ?: "" } catch (_: Exception) { "" }
+            tvWelcome.text = "مرحباً، $email"
+
+            // Device click listener
+            deviceAdapter.onDeviceClick = { device ->
+                try {
+                    (activity as? MainActivity)?.selectDevice(device)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Device click error: ${e.message}")
+                }
+            }
+
+            // Observe devices
+            viewLifecycleOwner.lifecycleScope.launch {
+                viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    try {
+                        FirebaseManager.getDevices().collect { devices ->
                             try {
-                                adapter.update(devices)
+                                deviceAdapter.submitList(devices)
                                 if (devices.isEmpty()) {
-                                    emptyState?.visibility = View.VISIBLE
-                                    rvDevices?.visibility = View.GONE
+                                    rvDevices.visibility = View.GONE
+                                    emptyStateContainer.visibility = View.VISIBLE
                                 } else {
-                                    emptyState?.visibility = View.GONE
-                                    rvDevices?.visibility = View.VISIBLE
-                                    if (MainActivity.selectedDevice == null) {
-                                        try { (activity as? MainActivity)?.selectDevice(devices.first()) } catch (_: Throwable) {}
+                                    rvDevices.visibility = View.VISIBLE
+                                    emptyStateContainer.visibility = View.GONE
+                                    // Auto-select first device if none selected
+                                    if (MainActivity.selectedDevice == null && devices.isNotEmpty()) {
+                                        (activity as? MainActivity)?.selectDevice(devices[0])
                                     }
                                 }
-                            } catch (t: Throwable) {
-                                Log.e("Dashboard", "collect error: ${t.message}")
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Device list update error: ${e.message}")
                             }
                         }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Flow collection error: ${e.message}")
                     }
                 }
-            } catch (t: Throwable) {
-                Log.e("Dashboard", "lifecycleScope error: ${t.javaClass.simpleName}: ${t.message}")
             }
-        } catch (t: Throwable) {
-            Log.e("Dashboard", "onViewCreated CRASH: ${t.javaClass.simpleName}: ${t.message}")
+        } catch (e: Exception) {
+            Log.e(TAG, "setupViews error: ${e.message}")
         }
     }
 }

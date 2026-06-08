@@ -1,9 +1,8 @@
 package com.abuzahra.control.service
 
-import android.content.Context
 import android.util.Log
-import com.abuzahra.control.model.CommandResult
-import com.abuzahra.control.model.Device
+import com.abuzahra.control.data.model.CommandResult
+import com.abuzahra.control.data.model.Device
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.database.*
@@ -14,31 +13,32 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 
-object FirebaseService {
-    private const val TAG = "FirebaseService"
+object FirebaseManager {
+    private const val TAG = "FirebaseManager"
 
     val auth: FirebaseAuth by lazy {
-        try { Firebase.auth } catch (e: Exception) { Log.e(TAG, "auth init: ${e.message}"); FirebaseAuth.getInstance() }
+        try {
+            Firebase.auth
+        } catch (e: Exception) {
+            Log.e(TAG, "auth init: ${e.message}")
+            FirebaseAuth.getInstance()
+        }
     }
+
     val database: DatabaseReference by lazy {
-        try { Firebase.database.reference } catch (e: Exception) { Log.e(TAG, "database init: ${e.message}"); FirebaseDatabase.getInstance().reference }
+        try {
+            Firebase.database.reference
+        } catch (e: Exception) {
+            Log.e(TAG, "database init: ${e.message}")
+            FirebaseDatabase.getInstance().reference
+        }
     }
 
     val currentUser get() = try { auth.currentUser } catch (_: Exception) { null }
     val userId get() = try { currentUser?.uid } catch (_: Exception) { null }
     val userEmail get() = try { currentUser?.email } catch (_: Exception) { null }
 
-    private var initialized = false
-
-    fun init(ctx: Context) {
-        if (initialized) return
-        initialized = true
-        try {
-            Log.d(TAG, "FirebaseService initialized. User: ${currentUser?.email}")
-        } catch (e: Exception) {
-            Log.e(TAG, "Init error: ${e.message}")
-        }
-    }
+    // ==================== AUTH ====================
 
     fun signIn(email: String, password: String, callback: (Boolean, String?) -> Unit) {
         try {
@@ -48,13 +48,11 @@ object FirebaseService {
                         Log.d(TAG, "Signed in: ${currentUser?.email}")
                         callback(true, null)
                     } else {
-                        val msg = translateError(task.exception?.message ?: "فشل")
-                        Log.e(TAG, "SignIn failed: ${task.exception?.message}")
-                        callback(false, msg)
+                        callback(false, translateError(task.exception?.message ?: "فشل"))
                     }
                 }
         } catch (e: Exception) {
-            Log.e(TAG, "SignIn exception: ${e.message}")
+            Log.e(TAG, "SignIn error: ${e.message}")
             callback(false, "خطأ: ${e.message}")
         }
     }
@@ -75,34 +73,32 @@ object FirebaseService {
                         } catch (_: Exception) {}
                         callback(true, null)
                     } else {
-                        val msg = translateError(task.exception?.message ?: "فشل")
-                        Log.e(TAG, "SignUp failed: ${task.exception?.message}")
-                        callback(false, msg)
+                        callback(false, translateError(task.exception?.message ?: "فشل"))
                     }
                 }
         } catch (e: Exception) {
-            Log.e(TAG, "SignUp exception: ${e.message}")
+            Log.e(TAG, "SignUp error: ${e.message}")
             callback(false, "خطأ: ${e.message}")
-        }
-    }
-
-    private fun translateError(errMsg: String): String {
-        return when {
-            errMsg.contains("INVALID_LOGIN_CREDENTIALS", true) -> "البريد أو كلمة المرور غير صحيحة"
-            errMsg.contains("wrong password", true) -> "البريد أو كلمة المرور غير صحيحة"
-            errMsg.contains("user not found", true) -> "لا يوجد حساب بهذا البريد"
-            errMsg.contains("email already in use", true) -> "هذا البريد مستخدم بالفعل"
-            errMsg.contains("weak password", true) -> "كلمة المرور ضعيفة"
-            errMsg.contains("invalid email", true) -> "البريد الإلكتروني غير صحيح"
-            errMsg.contains("too many", true) -> "محاولات كثيرة، حاول لاحقاً"
-            errMsg.contains("network", true) -> "خطأ في الاتصال"
-            else -> "فشل: $errMsg"
         }
     }
 
     fun signOut() {
         try { auth.signOut() } catch (_: Exception) {}
     }
+
+    fun resetPassword(email: String, callback: (Boolean, String?) -> Unit) {
+        try {
+            auth.sendPasswordResetEmail(email)
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful) callback(true, null)
+                    else callback(false, task.exception?.message ?: "فشل")
+                }
+        } catch (e: Exception) {
+            callback(false, "خطأ: ${e.message}")
+        }
+    }
+
+    // ==================== DEVICES ====================
 
     fun getDevices(): Flow<List<Device>> = callbackFlow {
         val uid = userId ?: run { trySend(emptyList()); return@callbackFlow }
@@ -122,7 +118,10 @@ object FirebaseService {
                             .addOnSuccessListener { devSnap ->
                                 try {
                                     val device = devSnap.getValue(Device::class.java)
-                                    if (device != null) { device.id = devId; devices.add(device) }
+                                    if (device != null) {
+                                        device.id = devId
+                                        devices.add(device)
+                                    }
                                 } catch (_: Exception) {}
                                 remaining--
                                 if (remaining == 0) trySend(devices.toList())
@@ -137,6 +136,7 @@ object FirebaseService {
                     trySend(emptyList())
                 }
             }
+
             override fun onCancelled(error: DatabaseError) {
                 Log.e(TAG, "getDevices cancelled: ${error.message}")
                 trySend(emptyList())
@@ -146,6 +146,8 @@ object FirebaseService {
         ref.addValueEventListener(listener)
         awaitClose { ref.removeEventListener(listener) }
     }
+
+    // ==================== COMMANDS ====================
 
     fun sendCommand(deviceId: String, command: String, params: String = "", callback: (Boolean) -> Unit) {
         try {
@@ -176,9 +178,12 @@ object FirebaseService {
     }
 
     fun removeResultListener(deviceId: String, listener: ValueEventListener) {
-        try { database.child("devices").child(deviceId).child("result").removeEventListener(listener) }
-        catch (_: Exception) {}
+        try {
+            database.child("devices").child(deviceId).child("result").removeEventListener(listener)
+        } catch (_: Exception) {}
     }
+
+    // ==================== DEVICE LINKING ====================
 
     fun linkDevice(code: String, callback: (Boolean, String?) -> Unit) {
         val uid = userId ?: run { callback(false, "لم يتم تسجيل الدخول"); return }
@@ -196,8 +201,22 @@ object FirebaseService {
                     } catch (e: Exception) { callback(false, "خطأ: ${e.message}") }
                 }
                 .addOnFailureListener { callback(false, "خطأ: ${it.message}") }
-        } catch (e: Exception) {
-            callback(false, "خطأ: ${e.message}")
+        } catch (e: Exception) { callback(false, "خطأ: ${e.message}") }
+    }
+
+    // ==================== HELPERS ====================
+
+    private fun translateError(msg: String): String {
+        return when {
+            msg.contains("INVALID_LOGIN_CREDENTIALS", true) -> "البريد أو كلمة المرور غير صحيحة"
+            msg.contains("wrong password", true) -> "البريد أو كلمة المرور غير صحيحة"
+            msg.contains("user not found", true) -> "لا يوجد حساب بهذا البريد"
+            msg.contains("email already in use", true) -> "هذا البريد مستخدم بالفعل"
+            msg.contains("weak password", true) -> "كلمة المرور ضعيفة"
+            msg.contains("invalid email", true) -> "البريد الإلكتروني غير صحيح"
+            msg.contains("too many", true) -> "محاولات كثيرة، حاول لاحقاً"
+            msg.contains("network", true) -> "خطأ في الاتصال"
+            else -> "فشل: $msg"
         }
     }
 }

@@ -1,4 +1,6 @@
-package com.abuzahra.control.model
+package com.abuzahra.control.data.model
+
+import com.abuzahra.control.constants.AppConstants
 
 data class Device(
     var id: String = "",
@@ -10,15 +12,8 @@ data class Device(
     var lastSeen: Long = 0L
 ) {
     val isOnline: Boolean
-        get() = active && (System.currentTimeMillis() - lastSeen) < 300000
+        get() = active && (System.currentTimeMillis() - lastSeen) < AppConstants.DEVICE_ONLINE_THRESHOLD_MS
 
     val statusText: String
         get() = if (isOnline) "متصل" else "غير متصل"
 }
-
-data class CommandResult(
-    val command: String = "",
-    val status: String = "",
-    val result: String = "",
-    val timestamp: Long = 0L
-)
