@@ -42,12 +42,12 @@ class MainActivity : AppCompatActivity() {
     private var navButtons: List<TextView>? = null
 
     private val navItems = listOf(
-        Triple(R.id.nav_dashboard, "\u{1F4CA}", "لوحة التحكم"),
-        Triple(R.id.nav_control, "\u23F0", "التحكم"),
-        Triple(R.id.nav_sms_calls, "\u2709", "الرسائل"),
-        Triple(R.id.nav_files, "\u{1F4C1}", "الملفات"),
-        Triple(R.id.nav_social, "\u{1F465}", "التواصل"),
-        Triple(R.id.nav_settings, "\u2699", "الإعدادات")
+        Triple(R.id.nav_dashboard, "Dashboard", "لوحة التحكم"),
+        Triple(R.id.nav_control, "Control", "التحكم"),
+        Triple(R.id.nav_sms_calls, "SMS", "الرسائل"),
+        Triple(R.id.nav_files, "Files", "الملفات"),
+        Triple(R.id.nav_social, "Social", "التواصل"),
+        Triple(R.id.nav_settings, "Settings", "الإعدادات")
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
