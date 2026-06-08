@@ -41,39 +41,53 @@ jobs:
           key: gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: gradle-
 
-      - name: Verify keystore exists
+      - name: Show SHA1 Fingerprint
+        id: sha1
         run: |
-          echo "Checking keystore..."
-          ls -la app/abuzahra-release.jks
-          keytool -list -v -keystore app/abuzahra-release.jks -storepass abuzahra2024 -alias abuzahra 2>&1 | head -20
+          echo "==========================================="
+          echo "   SHA1 FINGERPRINT (Add to Firebase Console)"
+          echo "==========================================="
+          SHA1=$(keytool -list -v -keystore app/abuzahra-release.jks -storepass abuzahra2024 -alias abuzahra 2>&1 | grep SHA1 | awk '{print $2}')
+          echo "SHA1=$SHA1"
+          echo "SHA1=$SHA1" >> $GITHUB_ENV
+          echo "sha1=$SHA1" >> $GITHUB_OUTPUT
+          echo "==========================================="
+          echo "  $SHA1"
+          echo "==========================================="
+          echo ""
+          echo "Firebase Console > Project Settings > Your Apps > Android"
+          echo "Add this SHA1 to enable Google Sign-In"
 
       - name: Verify google-services.json
         run: |
-          echo "Firebase project info:"
+          echo "==========================================="
+          echo "   Firebase Configuration"
+          echo "==========================================="
           python3 -c "
-          import json
-          with open('app/google-services.json') as f:
-              d = json.load(f)
-          print(f\"  Project Number: {d['project_info']['project_number']}\")
-          print(f\"  Project ID: {d['project_info']['project_id']}\")
-          print(f\"  Database URL: {d['project_info']['firebase_url']}\")
-          print(f\"  API Key: {d['client'][0]['api_key'][0]['current_key']}\")
-          print(f\"  Package: {d['client'][0]['client_info']['android_client_info']['package_name']}\")
-          "
+import json
+with open('app/google-services.json') as f:
+    d = json.load(f)
+print(f\"  Project Number: {d['project_info']['project_number']}\")
+print(f\"  Project ID: {d['project_info']['project_id']}\")
+print(f\"  Database URL: {d['project_info']['firebase_url']}\")
+print(f\"  API Key: {d['client'][0]['api_key'][0]['current_key']}\")
+print(f\"  Package: {d['client'][0]['client_info']['android_client_info']['package_name']}\")
+"
+          echo "==========================================="
 
       - name: Grant execute permission
         run: chmod +x gradlew
 
       - name: Build Release APK
         run: |
-          echo "============================="
-          echo "Starting Gradle build..."
-          echo "============================="
+          echo "==========================================="
+          echo "   Starting Gradle Build..."
+          echo "==========================================="
           ./gradlew assembleRelease --stacktrace 2>&1 | tee build-output.txt
           echo ""
-          echo "============================="
-          echo "Build completed!"
-          echo "============================="
+          echo "==========================================="
+          echo "   Build Completed!"
+          echo "==========================================="
 
       - name: Check APK exists
         run: |
@@ -85,19 +99,13 @@ jobs:
             exit 1
           fi
 
-      - name: Get SHA1 from keystore
-        run: |
-          SHA1=$(keytool -list -v -keystore app/abuzahra-release.jks -storepass abuzahra2024 -alias abuzahra 2>&1 | grep SHA1 | awk '{print $2}')
-          echo "SHA1=$SHA1" >> $GITHUB_ENV
-          echo "SHA1 Fingerprint: $SHA1"
-
       - name: Get version info
         id: version
         run: |
           VNAME=$(sed -n 's/.*versionName[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' app/build.gradle.kts | head -1)
           VCODE=$(sed -n 's/.*versionCode[[:space:]]*=[[:space:]]*\([0-9]*\).*/\1/p' app/build.gradle.kts | head -1)
-          if [ -z "$VNAME" ]; then VNAME="1.7"; fi
-          if [ -z "$VCODE" ]; then VCODE="7"; fi
+          if [ -z "$VNAME" ]; then VNAME="1.8"; fi
+          if [ -z "$VCODE" ]; then VCODE="8"; fi
           echo "version=$VNAME" >> $GITHUB_OUTPUT
           echo "code=$VCODE" >> $GITHUB_OUTPUT
           echo "Version: $VNAME ($VCODE)"
@@ -148,8 +156,12 @@ jobs:
       - name: Build Summary
         run: |
           echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### SHA1 Fingerprint" >> $GITHUB_STEP_SUMMARY
+          echo "\`${{ env.SHA1 }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Details" >> $GITHUB_STEP_SUMMARY
           echo "- **Version**: v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Status**: SUCCESS" >> $GITHUB_STEP_SUMMARY
           echo "- **APK Size**: $(ls -lh app/build/outputs/apk/release/app-release.apk | awk '{print $5}')" >> $GITHUB_STEP_SUMMARY
-          echo "- **SHA1**: \`${{ env.SHA1 }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Download**: [Release v${{ steps.version.outputs.version }}](${{ github.server_url }}/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.version }})" >> $GITHUB_STEP_SUMMARY

@@ -30,28 +30,32 @@ class MainActivity : AppCompatActivity() {
         private const val TAG = "MainActivity"
     }
 
-    private lateinit var fragmentContainer: FrameLayout
-    private lateinit var bottomNav: BottomNavigationView
-    private lateinit var tvTopTitle: TextView
-    private lateinit var tvDeviceCount: TextView
-    private lateinit var ivDeviceStatus: ImageView
-    private lateinit var resultPanel: View
-    private lateinit var tvResultTitle: TextView
-    private lateinit var tvResultContent: TextView
-    private lateinit var ivCloseResult: ImageView
+    private var fragmentContainer: FrameLayout? = null
+    private var bottomNav: BottomNavigationView? = null
+    private var tvTopTitle: TextView? = null
+    private var tvDeviceCount: TextView? = null
+    private var ivDeviceStatus: ImageView? = null
+    private var resultPanel: View? = null
+    private var tvResultTitle: TextView? = null
+    private var tvResultContent: TextView? = null
+    private var ivCloseResult: ImageView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Log.d(TAG, ">>> MainActivity.onCreate START")
+
+        // Step 1: Set content view
         try {
             setContentView(R.layout.activity_main)
-            Log.d(TAG, "Layout set successfully")
+            Log.d(TAG, "setContentView OK")
         } catch (e: Exception) {
-            Log.e(TAG, "FATAL: setContentView failed: ${e.message}")
+            Log.e(TAG, "FATAL setContentView: ${e.message}")
             e.printStackTrace()
             finish()
             return
         }
 
+        // Step 2: Find all views (nullable for safety)
         try {
             fragmentContainer = findViewById(R.id.fragmentContainer)
             bottomNav = findViewById(R.id.bottomNav)
@@ -62,45 +66,76 @@ class MainActivity : AppCompatActivity() {
             tvResultTitle = findViewById(R.id.tvResultTitle)
             tvResultContent = findViewById(R.id.tvResultContent)
             ivCloseResult = findViewById(R.id.ivCloseResult)
+            Log.d(TAG, "All findViewById OK")
         } catch (e: Exception) {
-            Log.e(TAG, "FATAL: findViewById failed: ${e.message}")
+            Log.e(TAG, "FATAL findViewById: ${e.message}")
             e.printStackTrace()
-            finish()
-            return
+            // Don't finish - try to continue with null views
         }
 
-        // Init Firebase service
-        try { FirebaseService.init(this) } catch (e: Exception) { Log.e(TAG, "FirebaseService init: ${e.message}") }
-
-        // Bottom navigation
+        // Step 3: Init Firebase service
         try {
-            bottomNav.setOnItemSelectedListener { item ->
-                try { switchFragment(item.itemId) } catch (e: Exception) { Log.e(TAG, "Nav: ${e.message}") }
+            FirebaseService.init(this)
+            Log.d(TAG, "FirebaseService.init OK")
+        } catch (e: Exception) {
+            Log.e(TAG, "FirebaseService.init error: ${e.message}")
+        }
+
+        // Step 4: Bottom navigation
+        try {
+            bottomNav?.setOnItemSelectedListener { item ->
+                try {
+                    switchFragment(item.itemId)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Nav click error: ${e.message}")
+                }
                 true
             }
-        } catch (e: Exception) { Log.e(TAG, "BottomNav: ${e.message}") }
+            Log.d(TAG, "BottomNav OK")
+        } catch (e: Exception) {
+            Log.e(TAG, "BottomNav error: ${e.message}")
+        }
 
-        // Result panel close
-        try { ivCloseResult.setOnClickListener { resultPanel.visibility = View.GONE } } catch (e: Exception) { Log.e(TAG, "CloseResult: ${e.message}") }
+        // Step 5: Result panel close button
+        try {
+            ivCloseResult?.setOnClickListener {
+                resultPanel?.visibility = View.GONE
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "CloseResult error: ${e.message}")
+        }
 
-        // Welcome text
+        // Step 6: Welcome text
         try {
             val email = FirebaseService.userEmail
-            tvTopTitle.text = if (email != null) "مرحباً، ${email.split("@").first()}" else "لوحة التحكم"
-            tvDeviceCount.text = "جاهز"
-        } catch (e: Exception) { Log.e(TAG, "Welcome: ${e.message}") }
+            tvTopTitle?.text = if (email != null) {
+                val name = email.split("@").firstOrNull() ?: ""
+                "مرحباً، $name"
+            } else {
+                "لوحة التحكم"
+            }
+            tvDeviceCount?.text = "جاهز"
+            Log.d(TAG, "Welcome text OK")
+        } catch (e: Exception) {
+            Log.e(TAG, "Welcome error: ${e.message}")
+        }
 
-        // Load default fragment
+        // Step 7: Load default fragment (delayed to ensure layout is ready)
         try {
-            fragmentContainer.post {
+            fragmentContainer?.post {
                 try {
                     switchFragment(R.id.nav_dashboard)
-                    Log.d(TAG, "Default fragment loaded")
-                } catch (e: Exception) { Log.e(TAG, "Default frag: ${e.message}") }
+                    Log.d(TAG, "Default fragment loaded OK")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Default fragment error: ${e.message}")
+                    e.printStackTrace()
+                }
             }
-        } catch (e: Exception) { Log.e(TAG, "Post: ${e.message}") }
+        } catch (e: Exception) {
+            Log.e(TAG, "Post error: ${e.message}")
+        }
 
-        Log.d(TAG, "onCreate completed")
+        Log.d(TAG, ">>> MainActivity.onCreate COMPLETE")
     }
 
     private fun switchFragment(itemId: Int) {
@@ -117,6 +152,7 @@ class MainActivity : AppCompatActivity() {
             supportFragmentManager.beginTransaction()
                 .replace(R.id.fragmentContainer, frag)
                 .commitAllowingStateLoss()
+            Log.d(TAG, "Fragment switched to $itemId")
         } catch (e: Exception) {
             Log.e(TAG, "switchFragment crash: ${e.message}")
             e.printStackTrace()
@@ -127,15 +163,17 @@ class MainActivity : AppCompatActivity() {
         try {
             selectedDevice = device
             currentDevice = device
-            tvTopTitle.text = device.name.ifEmpty { device.model.ifEmpty { "جهاز" } }
-            tvDeviceCount.text = if (device.isOnline) "متصل" else "غير متصل"
+            tvTopTitle?.text = device.name.ifEmpty { device.model.ifEmpty { "جهاز" } }
+            tvDeviceCount?.text = if (device.isOnline) "متصل" else "غير متصل"
             try {
-                ivDeviceStatus.setBackgroundResource(
+                ivDeviceStatus?.setBackgroundResource(
                     if (device.isOnline) R.drawable.bg_status_online else R.drawable.bg_status_offline
                 )
             } catch (_: Exception) {}
             listenResults(device)
-        } catch (e: Exception) { Log.e(TAG, "selectDevice: ${e.message}") }
+        } catch (e: Exception) {
+            Log.e(TAG, "selectDevice: ${e.message}")
+        }
     }
 
     private fun listenResults(device: Device) {
@@ -148,13 +186,15 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }
-        } catch (e: Exception) { Log.e(TAG, "listenResults: ${e.message}") }
+        } catch (e: Exception) {
+            Log.e(TAG, "listenResults: ${e.message}")
+        }
     }
 
     private fun showResult(r: CommandResult) {
         try {
-            resultPanel.visibility = View.VISIBLE
-            tvResultTitle.text = when (r.command) {
+            resultPanel?.visibility = View.VISIBLE
+            tvResultTitle?.text = when (r.command) {
                 "get_sms" -> "الرسائل"
                 "get_calls" -> "المكالمات"
                 "get_contacts" -> "جهات الاتصال"
@@ -163,19 +203,28 @@ class MainActivity : AppCompatActivity() {
                 "get_battery" -> "البطارية"
                 else -> r.command
             }
-            tvResultContent.text = if (r.result.length > 3000) r.result.take(3000) + "\n...(مقتطع)" else r.result
-        } catch (e: Exception) { Log.e(TAG, "showResult: ${e.message}") }
+            tvResultContent?.text = if (r.result.length > 3000) r.result.take(3000) + "\n...(مقتطع)" else r.result
+        } catch (e: Exception) {
+            Log.e(TAG, "showResult: ${e.message}")
+        }
     }
 
     fun sendCommand(command: String, params: String = "") {
         try {
             val dev = selectedDevice
-            if (dev == null) { Toast.makeText(this, "اختر جهازاً أولاً", Toast.LENGTH_SHORT).show(); return }
+            if (dev == null) {
+                Toast.makeText(this, "اختر جهازاً أولاً", Toast.LENGTH_SHORT).show()
+                return
+            }
             Toast.makeText(this, "جاري الإرسال: $command", Toast.LENGTH_SHORT).show()
             FirebaseService.sendCommand(dev.id, command, params) { ok ->
-                runOnUiThread { Toast.makeText(this, if (ok) "تم الإرسال" else "فشل", Toast.LENGTH_SHORT).show() }
+                runOnUiThread {
+                    Toast.makeText(this, if (ok) "تم الإرسال" else "فشل", Toast.LENGTH_SHORT).show()
+                }
             }
-        } catch (e: Exception) { Toast.makeText(this, "خطأ: ${e.message}", Toast.LENGTH_SHORT).show() }
+        } catch (e: Exception) {
+            Toast.makeText(this, "خطأ: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
     }
 
     override fun onDestroy() {

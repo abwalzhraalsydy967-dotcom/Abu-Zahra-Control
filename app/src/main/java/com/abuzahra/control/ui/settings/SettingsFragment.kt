@@ -37,7 +37,7 @@ class SettingsFragment : Fragment() {
                 try { startActivity(Intent(requireContext(), DeviceLinkActivity::class.java)) } catch (_: Exception) {}
             }
             btnAppInfo.setOnClickListener {
-                Toast.makeText(requireContext(), "Abu Zahra Control v1.5", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), "Abu Zahra Control v1.8", Toast.LENGTH_LONG).show()
             }
             btnLogout.setOnClickListener {
                 try {
