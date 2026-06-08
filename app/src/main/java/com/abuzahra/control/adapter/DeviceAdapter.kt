@@ -3,7 +3,6 @@ package com.abuzahra.control.adapter
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.abuzahra.control.R
@@ -17,7 +16,7 @@ class DeviceAdapter(
         val tvDeviceName: TextView = view.findViewById(R.id.tvDeviceName)
         val tvDeviceModel: TextView = view.findViewById(R.id.tvDeviceModel)
         val tvStatus: TextView = view.findViewById(R.id.tvStatus)
-        val statusIndicator: ImageView = view.findViewById(R.id.statusIndicator)
+        val statusIndicator: View = view.findViewById(R.id.statusIndicator)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {

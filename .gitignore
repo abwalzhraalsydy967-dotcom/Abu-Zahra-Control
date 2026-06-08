@@ -1,6 +1,12 @@
----
 # Build artifacts
 app/build/
 .gradle/
-app/abuzahra-release.jks
-*.jks
+build/
+local.properties
+*.apk
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
