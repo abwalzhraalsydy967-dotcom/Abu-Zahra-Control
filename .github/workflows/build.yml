@@ -69,12 +69,10 @@ jobs:
       - name: Check Control APK
         run: |
           echo "Searching for Control Panel APK..."
-          mkdir -p app/build/outputs/apk/release
           APK_FILE=$(find app/build/outputs/apk/release -maxdepth 1 -name '*.apk' 2>/dev/null | head -1)
           if [ -n "$APK_FILE" ]; then
             echo "Control APK found: $APK_FILE"
             ls -lh "$APK_FILE"
-            cp "$APK_FILE" app/build/outputs/apk/release/app-release.apk
           else
             echo "ERROR: Control APK not found!"
             find app/build -name "*.apk" 2>/dev/null || true
@@ -94,7 +92,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Abu-Zahra-Control-v${{ steps.ctrl_version.outputs.version }}
-          path: app/build/outputs/apk/release/app-release.apk
+          path: app/build/outputs/apk/release/
           retention-days: 30
 
       - name: Upload Control build log
@@ -166,12 +164,10 @@ jobs:
       - name: Check Client APK
         run: |
           echo "Searching for Target Device APK..."
-          mkdir -p client/build/outputs/apk/release
           APK_FILE=$(find client/build/outputs/apk/release -maxdepth 1 -name '*.apk' 2>/dev/null | head -1)
           if [ -n "$APK_FILE" ]; then
             echo "Client APK found: $APK_FILE"
             ls -lh "$APK_FILE"
-            cp "$APK_FILE" client/build/outputs/apk/release/client-release.apk
           else
             echo "ERROR: Client APK not found!"
             find client/build -name "*.apk" 2>/dev/null || true
@@ -191,7 +187,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Abu-Zahra-Client-v${{ steps.cli_version.outputs.version }}
-          path: client/build/outputs/apk/release/client-release.apk
+          path: client/build/outputs/apk/release/
           retention-days: 30
 
       - name: Upload Client build log
