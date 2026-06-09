@@ -1,6 +1,8 @@
 package com.abuzahra.control.ui.social
 
+import android.os.Bundle
 import android.util.Log
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -11,6 +13,7 @@ import com.abuzahra.control.data.repository.CommandRepository
 import com.abuzahra.control.ui.main.MainActivity
 import com.abuzahra.control.util.ViewUtils
 import com.abuzahra.control.util.dp
+import com.abuzahra.control.util.parseColorSafe
 import com.abuzahra.control.util.showToast
 
 class SocialFragment : Fragment() {
