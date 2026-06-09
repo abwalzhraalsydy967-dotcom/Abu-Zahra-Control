@@ -61,9 +61,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var eventLogStatus: TextView
     private lateinit var eventLogDetail: TextView
     private var eventLogExpanded = false
-    private val logUpdateListener = { _: List<com.abuzahra.manager.service.EventLogger.LogEntry> ->
-        runOnUiThread { updateEventLog() }
-    }
+    private val logUpdateListener: (List<com.abuzahra.manager.service.EventLogger.LogEntry>) -> Unit =
+        { _ -> runOnUiThread { updateEventLog() } }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

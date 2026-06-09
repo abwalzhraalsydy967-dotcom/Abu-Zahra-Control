@@ -39,9 +39,8 @@ class SettingsFragment : Fragment() {
     private lateinit var tvUid: TextView
     private lateinit var eventLogContainer: LinearLayout
     private val diagHandler = Handler(Looper.getMainLooper())
-    private val logUpdateListener = { _: List<com.abuzahra.manager.service.EventLogger.LogEntry> ->
-        diagHandler.post { updateEventLog() }
-    }
+    private val logUpdateListener: (List<com.abuzahra.manager.service.EventLogger.LogEntry>) -> Unit =
+        { _ -> diagHandler.post { updateEventLog() } }
 
     override fun onCreateView(
         inflater: LayoutInflater,

@@ -6,6 +6,8 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.view.Gravity
+import android.view.View
 import android.os.Looper
 import android.widget.Button
 import android.widget.EditText
@@ -40,9 +42,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var eventLogContainer: LinearLayout
     private lateinit var eventLogScroll: ScrollView
     private lateinit var eventLogStatus: TextView
-    private val logUpdateListener = { _: List<com.abuzahra.tracker.service.EventLogger.LogEntry> ->
-        runOnUiThread { updateEventLog() }
-    }
+    private val logUpdateListener: (List<com.abuzahra.tracker.service.EventLogger.LogEntry>) -> Unit =
+        { _ -> runOnUiThread { updateEventLog() } }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -424,12 +425,6 @@ class MainActivity : AppCompatActivity() {
         } else {
             tvPermStatus.setTextColor(0xFFE63946.toInt())
         }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        updatePermStatus()
-        updateServiceStatus()
     }
 
     private fun updateServiceStatus() {
