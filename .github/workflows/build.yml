@@ -1,4 +1,4 @@
-name: Build & Release APK
+name: Build & Release APKs
 
 on:
   push:
@@ -17,8 +17,8 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    name: Build Release APK
+  build-control:
+    name: Build Control Panel APK
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -41,140 +41,218 @@ jobs:
           key: gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: gradle-
 
-      - name: Generate and Show SHA1 Fingerprint
-        id: sha1
-        run: |
-          echo "============================================================"
-          echo "  SHA1 FINGERPRINT"
-          echo "  Add this to Firebase Console > Project Settings > Android"
-          echo "============================================================"
-          SHA1=$(keytool -list -v -keystore app/abuzahra-release.jks -storepass abuzahra2024 -alias abuzahra 2>&1 | grep SHA1 | awk '{print $2}' | tr '[:upper:]' '[:lower:]')
-          echo "SHA1=$SHA1"
-          echo "SHA1=$SHA1" >> $GITHUB_ENV
-          echo "sha1=$SHA1" >> $GITHUB_OUTPUT
-          echo ""
-          echo "============================================================"
-          echo "  SHA1: $SHA1"
-          echo "============================================================"
-          echo ""
-          echo "To enable Google Sign-In:"
-          echo "1. Go to Firebase Console"
-          echo "2. Project Settings > Your Apps > Android"
-          echo "3. Add SHA1: $SHA1"
+      - name: Grant execute permission
+        run: chmod +x gradlew
 
-      - name: Show MD5 and SHA256 too
+      - name: Build Control Panel Release APK
         run: |
           echo "============================================================"
-          echo "  All Fingerprints"
+          echo "  Building Control Panel (app module)..."
           echo "============================================================"
-          keytool -list -v -keystore app/abuzahra-release.jks -storepass abuzahra2024 -alias abuzahra 2>&1 | grep -E "SHA1|SHA256|MD5" | awk '{print tolower($0)}'
-          echo "============================================================"
+          ./gradlew :app:assembleRelease --stacktrace 2>&1 | tee control-build.txt
+          echo "Build exit code: $?"
 
-      - name: Verify google-services.json
+      - name: Check Control APK
+        run: |
+          echo "Searching for Control Panel APK..."
+          find app/build/outputs -name "*.apk" 2>/dev/null || true
+          if [ -f app/build/outputs/apk/release/app-release.apk ]; then
+            echo "Control APK found!"
+            ls -lh app/build/outputs/apk/release/app-release.apk
+          elif [ -f app/build/outputs/apk/release/abu-zahra-control-release.apk ]; then
+            echo "Control APK found at alternate path!"
+            cp app/build/outputs/apk/release/abu-zahra-control-release.apk app/build/outputs/apk/release/app-release.apk
+            ls -lh app/build/outputs/apk/release/app-release.apk
+          else
+            echo "ERROR: Control APK not found!"
+            find app/build -name "*.apk" 2>/dev/null
+            exit 1
+          fi
+
+      - name: Get Control Panel version
+        id: ctrl_version
+        run: |
+          VNAME=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts | head -1)
+          VCODE=$(grep -oP 'versionCode\s*=\s*\K[0-9]+' app/build.gradle.kts | head -1)
+          echo "version=$VNAME" >> $GITHUB_OUTPUT
+          echo "code=$VCODE" >> $GITHUB_OUTPUT
+          echo "Control Panel: v$VNAME ($VCODE)"
+
+      - name: Upload Control Panel APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Abu-Zahra-Control-v${{ steps.ctrl_version.outputs.version }}
+          path: app/build/outputs/apk/release/app-release.apk
+          retention-days: 30
+
+      - name: Upload Control build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: control-build-log-${{ github.run_number }}
+          path: control-build.txt
+          retention-days: 7
+
+  build-client:
+    name: Build Target Device APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: gradle-
+
+      - name: Verify client google-services.json
         run: |
           echo "============================================================"
-          echo "  Firebase Configuration"
+          echo "  Target App Firebase Configuration"
           echo "============================================================"
-          PROJECT=$(python3 -c 'import json; d=json.load(open("app/google-services.json")); print(d["project_info"]["project_id"])')
-          DBURL=$(python3 -c 'import json; d=json.load(open("app/google-services.json")); print(d["project_info"]["firebase_url"])')
-          APIKEY=$(python3 -c 'import json; d=json.load(open("app/google-services.json")); print(d["client"][0]["api_key"][0]["current_key"])')
-          PKG=$(python3 -c 'import json; d=json.load(open("app/google-services.json")); print(d["client"][0]["client_info"]["android_client_info"]["package_name"])')
-          echo "Project: $PROJECT"
-          echo "DB URL: $DBURL"
-          echo "API Key: $APIKEY"
-          echo "Package: $PKG"
-          echo "============================================================"
+          if [ -f client/google-services.json ]; then
+            PROJECT=$(python3 -c 'import json; d=json.load(open("client/google-services.json")); print(d["project_info"]["project_id"])')
+            PKG=$(python3 -c 'import json; d=json.load(open("client/google-services.json")); print(d["client"][0]["client_info"]["android_client_info"]["package_name"])')
+            echo "Project: $PROJECT"
+            echo "Package: $PKG"
+          else
+            echo "ERROR: client/google-services.json not found!"
+            exit 1
+          fi
 
       - name: Grant execute permission
         run: chmod +x gradlew
 
-      - name: Build Release APK
+      - name: Build Target Device Release APK
         run: |
           echo "============================================================"
-          echo "  Starting Gradle Build..."
+          echo "  Building Target Device App (client module)..."
           echo "============================================================"
-          ./gradlew assembleRelease --stacktrace 2>&1 | tee build-output.txt
-          echo ""
-          echo "============================================================"
-          echo "  Build Completed!"
-          echo "============================================================"
+          ./gradlew :client:assembleRelease --stacktrace 2>&1 | tee client-build.txt
+          echo "Build exit code: $?"
 
-      - name: Check APK exists
+      - name: Check Client APK
         run: |
-          echo "Searching for APK..."
-          find app/build/outputs -name "*.apk" 2>/dev/null || true
-          if [ -f app/build/outputs/apk/release/app-release.apk ]; then
-            echo "APK found at standard path!"
-            ls -lh app/build/outputs/apk/release/app-release.apk
-          elif [ -f app/build/outputs/apk/release/abu-zahra-control-release.apk ]; then
-            echo "APK found at alternate path!"
-            ls -lh app/build/outputs/apk/release/abu-zahra-control-release.apk
-            cp app/build/outputs/apk/release/abu-zahra-control-release.apk app/build/outputs/apk/release/app-release.apk
+          echo "Searching for Target Device APK..."
+          find client/build/outputs -name "*.apk" 2>/dev/null || true
+          if [ -f client/build/outputs/apk/release/client-release.apk ]; then
+            echo "Client APK found!"
+            ls -lh client/build/outputs/apk/release/client-release.apk
+          elif [ -f client/build/outputs/apk/release/abu-zahra-app-release.apk ]; then
+            echo "Client APK found at alternate path!"
+            cp client/build/outputs/apk/release/abu-zahra-app-release.apk client/build/outputs/apk/release/client-release.apk
+            ls -lh client/build/outputs/apk/release/client-release.apk
           else
-            echo "ERROR: APK not found in any expected path!"
-            find app/build -name "*.apk" 2>/dev/null || echo "No APK files found at all"
+            echo "ERROR: Client APK not found!"
+            find client/build -name "*.apk" 2>/dev/null
             exit 1
           fi
 
-      - name: Get version info
-        id: version
+      - name: Get Client version
+        id: cli_version
         run: |
-          VNAME=$(sed -n 's/.*versionName[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' app/build.gradle.kts | head -1)
-          VCODE=$(sed -n 's/.*versionCode[[:space:]]*=[[:space:]]*\([0-9]*\).*/\1/p' app/build.gradle.kts | head -1)
-          if [ -z "$VNAME" ]; then VNAME="2.1"; fi
-          if [ -z "$VCODE" ]; then VCODE="10"; fi
+          VNAME=$(grep -oP 'versionName\s*=\s*"\K[^"]+' client/build.gradle.kts | head -1)
+          VCODE=$(grep -oP 'versionCode\s*=\s*\K[0-9]+' client/build.gradle.kts | head -1)
           echo "version=$VNAME" >> $GITHUB_OUTPUT
           echo "code=$VCODE" >> $GITHUB_OUTPUT
-          echo "Version: $VNAME ($VCODE)"
+          echo "Target App: v$VNAME ($VCODE)"
 
-      - name: Upload APK artifact
+      - name: Upload Client APK
         uses: actions/upload-artifact@v4
         with:
-          name: Abu-Zahra-Control-v${{ steps.version.outputs.version }}
-          path: app/build/outputs/apk/release/app-release.apk
+          name: Abu-Zahra-Client-v${{ steps.cli_version.outputs.version }}
+          path: client/build/outputs/apk/release/client-release.apk
           retention-days: 30
 
-      - name: Upload build log
+      - name: Upload Client build log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: build-log-${{ github.run_number }}
-          path: build-output.txt
+          name: client-build-log-${{ github.run_number }}
+          path: client-build.txt
           retention-days: 7
+
+  release:
+    name: Create Release
+    needs: [build-control, build-client]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get versions
+        id: versions
+        run: |
+          CTRL_V=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts | head -1)
+          CLI_V=$(grep -oP 'versionName\s*=\s*"\K[^"]+' client/build.gradle.kts | head -1)
+          echo "control=$CTRL_V" >> $GITHUB_OUTPUT
+          echo "client=$CLI_V" >> $GITHUB_OUTPUT
+          echo "Control Panel: v$CTRL_V"
+          echo "Target App: v$CLI_V"
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+
+      - name: List artifacts
+        run: |
+          echo "Downloaded artifacts:"
+          find release-artifacts -name "*.apk" -exec ls -lh {} \;
+
+      - name: Copy APKs to release folder
+        run: |
+          mkdir -p release-files
+          # Find and copy Control Panel APK
+          find release-artifacts -name "app-release.apk" -exec cp {} release-files/Abu-Zahra-Control.apk \;
+          # Find and copy Client APK
+          find release-artifacts -name "client-release.apk" -exec cp {} release-files/Abu-Zahra-Client.apk \;
+          ls -lh release-files/
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.version.outputs.version }}
-          name: "v${{ steps.version.outputs.version }} - Build #${{ github.run_number }}"
+          tag_name: v${{ steps.versions.outputs.control }}-client-v${{ steps.versions.outputs.client }}
+          name: "Control v${{ steps.versions.outputs.control }} + Client v${{ steps.versions.outputs.client }}"
           body: |
-            ## Abu Zahra Control v${{ steps.version.outputs.version }}
+            ## Abu Zahra - Dual APK Release
 
             **Built by GitHub Actions** | Run #${{ github.run_number }}
 
-            ### SHA1 Fingerprint (Add to Firebase Console for Google Sign-In)
-            ```
-            ${{ env.SHA1 }}
-            ```
+            ### Download
+            | APK | Version | Description |
+            |-----|---------|-------------|
+            | **Abu-Zahra-Control.apk** | v${{ steps.versions.outputs.control }} | لوحة التحكم (Control Panel) |
+            | **Abu-Zahra-Client.apk** | v${{ steps.versions.outputs.client }} | تطبيق الهاتف المستهدف (Target Device) |
 
-            ### How to Enable Google Sign-In
-            1. Go to [Firebase Console](https://console.firebase.google.com)
-            2. Select your project
-            3. Go to Project Settings > Your Apps > Android app
-            4. Click "Add Fingerprint"
-            5. Paste: `${{ env.SHA1 }}`
-            6. Save and rebuild the app
-
-            ### Installation
-            1. Download `app-release.apk` below
-            2. Install on your Android device
-            3. Sign in with email or Google account
+            ### طريقة الربط (Linking Instructions)
+            1. ثبت **Abu-Zahra-Control.apk** في هاتفك (لوحة التحكم)
+            2. سجل دخول بحسابك
+            3. اذهب إلى الإعدادات > ربط جهاز جديد
+            4. اضغط **"توليد كود ربط"** وسيظهر كود من 6 أرقام
+            5. ثبت **Abu-Zahra-Client.apk** في الهاتف المستهدف
+            6. أدخل كود الربط المكون من 6 أرقام
+            7. سيتم ربط الجهاز تلقائياً
 
             ### Build Info
-            - Trigger: ${{ github.event_name }}
             - Commit: ${{ github.sha }}
             - Branch: ${{ github.ref_name }}
-          files: app/build/outputs/apk/release/app-release.apk
+          files: |
+            release-files/Abu-Zahra-Control.apk
+            release-files/Abu-Zahra-Client.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -182,11 +260,7 @@ jobs:
         run: |
           echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### SHA1 Fingerprint (for Firebase Google Sign-In)" >> $GITHUB_STEP_SUMMARY
-          echo '```${{ env.SHA1 }}```' >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Details" >> $GITHUB_STEP_SUMMARY
-          echo "- **Version**: v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Status**: SUCCESS" >> $GITHUB_STEP_SUMMARY
-          echo "- **APK Size**: $(ls -lh app/build/outputs/apk/release/app-release.apk | awk '{print $5}')" >> $GITHUB_STEP_SUMMARY
-          echo "- **Download**: [Release v${{ steps.version.outputs.version }}](${{ github.server_url }}/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.version }})" >> $GITHUB_STEP_SUMMARY
+          echo "| APK | Version | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|---------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Abu-Zahra-Control | v${{ steps.versions.outputs.control }} | SUCCESS |" >> $GITHUB_STEP_SUMMARY
+          echo "| Abu-Zahra-Client | v${{ steps.versions.outputs.client }} | SUCCESS |" >> $GITHUB_STEP_SUMMARY

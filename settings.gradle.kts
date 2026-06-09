@@ -14,3 +14,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "AbuZahraControl"
 include(":app")
+include(":client")

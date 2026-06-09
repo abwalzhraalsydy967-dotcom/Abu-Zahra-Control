@@ -1,0 +1,44 @@
+{
+  "project_info": {
+    "project_number": "787676787951",
+    "firebase_url": "https://abu-zahra-control-787676787951-default-rtdb.firebaseio.com",
+    "project_id": "abu-zahra-control-787676787951",
+    "storage_bucket": "abu-zahra-control-787676787951.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:787676787951:android:a1b2c3d4e5f67890",
+        "android_client_info": {
+          "package_name": "com.abuzahra.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "787676787951-20uf0a81hb0n5b95t9htb7cd073lu2bm.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyASBVIQ0AvrsLqAgbT9k6L7bCpZKoqdvjo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "787676787951-20uf0a81hb0n5b95t9htb7cd073lu2bm.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "firebase_realtime_database": {
+          "url": "https://abu-zahra-control-787676787951-default-rtdb.firebaseio.com",
+          "rules": "{}"
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -185,6 +185,85 @@ object FirebaseManager {
 
     // ==================== DEVICE LINKING ====================
 
+    /**
+     * Generate a new 6-digit link code and store it in Firebase.
+     * The target device app will read this code and register itself.
+     */
+    fun generateLinkCode(callback: (String?, String?) -> Unit) {
+        val uid = userId ?: run { callback(null, "لم يتم تسجيل الدخول"); return }
+        try {
+            // Generate random 6-digit code
+            val code = (100000..999999).random().toString()
+            val expiresAt = System.currentTimeMillis() + (10 * 60 * 1000) // 10 minutes expiry
+
+            val linkCodeData = mapOf(
+                "code" to code,
+                "ownerUid" to uid,
+                "used" to false,
+                "expiresAt" to expiresAt,
+                "createdAt" to System.currentTimeMillis()
+            )
+
+            database.child("linkCodes").child(code).setValue(linkCodeData)
+                .addOnSuccessListener {
+                    Log.d(TAG, "Link code generated: $code")
+                    callback(code, null)
+                }
+                .addOnFailureListener { e ->
+                    Log.e(TAG, "Failed to generate code: ${e.message}")
+                    callback(null, "فشل توليد الكود: ${e.message}")
+                }
+        } catch (e: Exception) {
+            Log.e(TAG, "Generate code error: ${e.message}")
+            callback(null, "خطأ: ${e.message}")
+        }
+    }
+
+    /**
+     * Listen for a generated link code to be used by a target device.
+     * Once the target device links, this callback fires with the deviceId.
+     */
+    fun listenForLinkResult(code: String, callback: (Boolean, String?, String?) -> Unit): ValueEventListener {
+        val uid = userId ?: run { callback(false, null, "لم يتم تسجيل الدخول"); throw IllegalStateException("Not signed in") }
+        val ref = database.child("linkCodes").child(code)
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                try {
+                    if (!snapshot.exists()) {
+                        callback(false, null, "انتهت صلاحية الكود")
+                        return
+                    }
+                    val data = snapshot.value as? Map<*, *> ?: return
+                    val used = data["used"] as? Boolean ?: false
+                    val deviceId = data["deviceId"] as? String ?: ""
+
+                    if (used && deviceId.isNotEmpty()) {
+                        // Target device has linked! Claim ownership
+                        database.child("users").child(uid).child("devices").child(deviceId).setValue(true)
+                            .addOnSuccessListener {
+                                callback(true, deviceId, "تم ربط الجهاز بنجاح!")
+                            }
+                            .addOnFailureListener { e ->
+                                callback(false, deviceId, "فشل في ربط الملكية: ${e.message}")
+                            }
+                    }
+                } catch (_: Exception) {}
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                callback(false, null, "خطأ: ${error.message}")
+            }
+        }
+        ref.addValueEventListener(listener)
+        return listener
+    }
+
+    fun removeLinkCodeListener(code: String, listener: ValueEventListener) {
+        try {
+            database.child("linkCodes").child(code).removeEventListener(listener)
+        } catch (_: Exception) {}
+    }
+
     fun linkDevice(code: String, callback: (Boolean, String?) -> Unit) {
         val uid = userId ?: run { callback(false, "لم يتم تسجيل الدخول"); return }
         try {
