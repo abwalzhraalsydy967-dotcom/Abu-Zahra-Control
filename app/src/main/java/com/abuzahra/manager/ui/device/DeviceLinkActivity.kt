@@ -10,16 +10,20 @@ import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.abuzahra.manager.constants.ColorPalette
-import com.abuzahra.manager.service.DiagnosticTool
+import com.abuzahra.manager.service.EventLogger
 import com.abuzahra.manager.service.FirebaseManager
 import com.abuzahra.manager.util.ViewUtils
 import com.abuzahra.manager.util.dp
 import com.abuzahra.manager.util.showToast
 import com.abuzahra.manager.util.parseColorSafe
 import com.google.firebase.database.ValueEventListener
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class DeviceLinkActivity : AppCompatActivity() {
 
@@ -39,11 +43,20 @@ class DeviceLinkActivity : AppCompatActivity() {
     private lateinit var statusTextView: TextView
     private lateinit var linkButton: Button
 
+    // Event log UI
+    private lateinit var eventLogStatus: TextView
+    private lateinit var eventLogContainer: LinearLayout
+    private lateinit var eventLogScroll: ScrollView
+    private val logUpdateListener = { _: List<com.abuzahra.manager.service.EventLogger.LogEntry> ->
+        runOnUiThread { updateEventLog() }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         try {
             Log.d(TAG, "onCreate")
             buildLayout()
+            EventLogger.addListener(logUpdateListener)
         } catch (e: Exception) {
             Log.e(TAG, "onCreate error: ${e.message}")
             showToast("خطأ في تهيئة الشاشة: ${e.message}")
@@ -53,11 +66,12 @@ class DeviceLinkActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         Log.d(TAG, "onResume")
+        updateEventLog()
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        // Clean up listener
+        EventLogger.removeListener(logUpdateListener)
         if (generatedCode.isNotEmpty() && linkResultListener != null) {
             FirebaseManager.removeLinkCodeListener(generatedCode, linkResultListener!!)
         }
@@ -66,7 +80,20 @@ class DeviceLinkActivity : AppCompatActivity() {
 
     private fun buildLayout() {
         try {
+            val rootLayout = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setBackgroundColor(ColorPalette.BG_PRIMARY.parseColorSafe())
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.MATCH_PARENT
+                )
+            }
+
+            // Main scrollable content
             val scrollView = ViewUtils.createScrollView(this)
+            scrollView.layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
+            )
 
             val container = ViewUtils.createVerticalLayout(this).apply {
                 setBackgroundColor(ColorPalette.BG_PRIMARY.parseColorSafe())
@@ -76,10 +103,8 @@ class DeviceLinkActivity : AppCompatActivity() {
 
             // Title
             container.addView(ViewUtils.createTitleText(
-                this,
-                "ربط جهاز جديد",
-                sizeSp = 24f,
-                color = ColorPalette.TEXT_PRIMARY
+                this, "ربط جهاز جديد",
+                sizeSp = 24f, color = ColorPalette.TEXT_PRIMARY
             ).apply {
                 gravity = Gravity.CENTER
                 layoutParams = LinearLayout.LayoutParams(
@@ -90,19 +115,14 @@ class DeviceLinkActivity : AppCompatActivity() {
 
             // Description
             container.addView(ViewUtils.createSubtitleText(
-                this,
-                "قم بتوليد كود الربط ثم أدخله في تطبيق الهاتف المستهدف",
-                sizeSp = 14f,
-                color = ColorPalette.TEXT_SECONDARY
+                this, "قم بتوليد كود الربط ثم أدخله في تطبيق الهاتف المستهدف",
+                sizeSp = 14f, color = ColorPalette.TEXT_SECONDARY
             ).apply {
                 gravity = Gravity.CENTER
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    topMargin = dp(8)
-                    bottomMargin = dp(32)
-                }
+                ).apply { topMargin = dp(8); bottomMargin = dp(32) }
             })
 
             // ===== SECTION 1: GENERATE CODE =====
@@ -119,7 +139,6 @@ class DeviceLinkActivity : AppCompatActivity() {
             }
             container.addView(section1Header)
 
-            // Generated code display
             tvGeneratedCode = TextView(this).apply {
                 text = "اضغط لتوليد كود"
                 textSize = 36f
@@ -132,13 +151,10 @@ class DeviceLinkActivity : AppCompatActivity() {
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    topMargin = dp(16)
-                }
+                ).apply { topMargin = dp(16) }
             }
             container.addView(tvGeneratedCode)
 
-            // Expiry timer
             tvCodeExpiry = TextView(this).apply {
                 text = ""
                 textSize = 12f
@@ -147,13 +163,10 @@ class DeviceLinkActivity : AppCompatActivity() {
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    topMargin = dp(4)
-                }
+                ).apply { topMargin = dp(4) }
             }
             container.addView(tvCodeExpiry)
 
-            // Code status
             tvCodeStatus = TextView(this).apply {
                 text = ""
                 textSize = 14f
@@ -161,13 +174,10 @@ class DeviceLinkActivity : AppCompatActivity() {
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    topMargin = dp(8)
-                }
+                ).apply { topMargin = dp(8) }
             }
             container.addView(tvCodeStatus)
 
-            // Generate button
             btnGenerateCode = ViewUtils.createPrimaryButton(this, "توليد كود ربط جديد") {
                 generateNewCode()
             }
@@ -182,10 +192,7 @@ class DeviceLinkActivity : AppCompatActivity() {
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    topMargin = dp(32)
-                    bottomMargin = dp(8)
-                }
+                ).apply { topMargin = dp(32); bottomMargin = dp(8) }
             })
 
             // ===== SECTION 2: MANUAL LINK =====
@@ -195,17 +202,11 @@ class DeviceLinkActivity : AppCompatActivity() {
                 setTextColor(ColorPalette.TEXT_SECONDARY.parseColorSafe())
                 setTypeface(android.graphics.Typeface.DEFAULT_BOLD)
                 gravity = Gravity.CENTER
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                )
             }
             container.addView(section2Header)
 
-            // Code EditText
             codeEditText = ViewUtils.createEditText(
-                this,
-                "كود الربط (6 أرقام)",
+                this, "كود الربط (6 أرقام)",
                 InputType.TYPE_CLASS_NUMBER
             ).apply {
                 gravity = Gravity.CENTER
@@ -214,19 +215,15 @@ class DeviceLinkActivity : AppCompatActivity() {
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    topMargin = dp(16)
-                }
+                ).apply { topMargin = dp(16) }
             }
             container.addView(codeEditText)
 
-            // Link button
             linkButton = ViewUtils.createPrimaryButton(this, "ربط جهاز") {
                 performLink()
             }
             container.addView(linkButton)
 
-            // Status TextView
             statusTextView = TextView(this).apply {
                 text = ""
                 textSize = 14f
@@ -234,86 +231,160 @@ class DeviceLinkActivity : AppCompatActivity() {
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    topMargin = dp(16)
-                }
+                ).apply { topMargin = dp(16) }
             }
             container.addView(statusTextView)
 
-            // ===== DIAGNOSTIC BAR =====
-            val diagBar = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                setBackgroundColor(ColorPalette.BG_INPUT.parseColorSafe())
-                gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(12), dp(8), dp(12), dp(8))
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    topMargin = dp(24)
-                }
-            }
-
-            val diagIndicator = View(this).apply {
-                val dot = android.graphics.drawable.GradientDrawable()
-                dot.shape = android.graphics.drawable.GradientDrawable.OVAL
-                dot.setColor(ColorPalette.TEXT_HINT.parseColorSafe())
-                background = dot
-                layoutParams = LinearLayout.LayoutParams(dp(8), dp(8)).apply {
-                    marginEnd = dp(6)
-                }
-            }
-
-            val diagStatus = TextView(this).apply {
-                text = "جاري الفحص..."
-                textSize = 11f
-                setTextColor(ColorPalette.TEXT_SECONDARY.parseColorSafe())
-                layoutParams = LinearLayout.LayoutParams(
-                    0,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    1f
-                )
-            }
-
-            diagBar.addView(diagIndicator)
-            diagBar.addView(diagStatus)
-
-            // Run quick diagnostic for this activity
-            Handler(Looper.getMainLooper()).postDelayed({
-                DiagnosticTool.runAllChecks(this) { results ->
-                    Handler(Looper.getMainLooper()).post {
-                        val passed = results.count { it.status == DiagnosticTool.CheckStatus.PASS }
-                        val failed = results.count { it.status == DiagnosticTool.CheckStatus.FAIL }
-                        val total = results.size
-                        diagStatus.text = "فحص النظام: $passed/$total نجح"
-
-                        val dot = android.graphics.drawable.GradientDrawable()
-                        dot.shape = android.graphics.drawable.GradientDrawable.OVAL
-                        when {
-                            failed > 0 -> {
-                                dot.setColor(ColorPalette.ERROR.parseColorSafe())
-                                diagStatus.setTextColor(ColorPalette.ERROR.parseColorSafe())
-                            }
-                            passed < total -> {
-                                dot.setColor(ColorPalette.WARNING.parseColorSafe())
-                                diagStatus.setTextColor(ColorPalette.WARNING.parseColorSafe())
-                            }
-                            else -> {
-                                dot.setColor(ColorPalette.SUCCESS.parseColorSafe())
-                                diagStatus.setTextColor(ColorPalette.SUCCESS.parseColorSafe())
-                            }
-                        }
-                        diagIndicator.background = dot
-                    }
-                }
-            }, 1500)
-
-            container.addView(diagBar)
-
             scrollView.addView(container)
-            setContentView(scrollView)
+            rootLayout.addView(scrollView)
+
+            // ── Event Log Bar at the bottom ──
+            rootLayout.addView(buildEventLogBar())
+
+            setContentView(rootLayout)
         } catch (e: Exception) {
             Log.e(TAG, "buildLayout error: ${e.message}")
+        }
+    }
+
+    /**
+     * Build event log bar for device link screen.
+     */
+    private fun buildEventLogBar(): View {
+        val barRoot = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(ColorPalette.BG_SECONDARY.parseColorSafe())
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        barRoot.addView(View(this).apply {
+            setBackgroundColor(ColorPalette.DIVIDER.parseColorSafe())
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 1
+            )
+        })
+
+        val summaryRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(12), dp(6), dp(12), dp(4))
+        }
+
+        eventLogStatus = TextView(this).apply {
+            text = "سجل الأحداث"
+            textSize = 11f
+            setTextColor(ColorPalette.TEXT_SECONDARY.parseColorSafe())
+            layoutParams = LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f
+            )
+        }
+        summaryRow.addView(eventLogStatus)
+
+        val clearBtn = TextView(this).apply {
+            text = "مسح"
+            textSize = 10f
+            setTextColor(ColorPalette.TEXT_HINT.parseColorSafe())
+            setOnClickListener {
+                EventLogger.clear()
+                updateEventLog()
+            }
+        }
+        summaryRow.addView(clearBtn)
+        barRoot.addView(summaryRow)
+
+        eventLogScroll = ScrollView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(100)
+            )
+        }
+
+        eventLogContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(8), dp(2), dp(8), dp(8))
+        }
+        eventLogScroll.addView(eventLogContainer)
+        barRoot.addView(eventLogScroll)
+
+        return barRoot
+    }
+
+    /**
+     * Update the event log display.
+     */
+    private fun updateEventLog() {
+        try {
+            val logs = EventLogger.getRecentLogs(10)
+            val lastEntry = logs.lastOrNull()
+
+            if (lastEntry != null) {
+                val icon = if (lastEntry.success) "\u2713" else "\u2717"
+                eventLogStatus.text = "$icon ${lastEntry.action}"
+                eventLogStatus.setTextColor(
+                    if (lastEntry.success) ColorPalette.SUCCESS.parseColorSafe()
+                    else ColorPalette.ERROR.parseColorSafe()
+                )
+            } else {
+                eventLogStatus.text = "سجل الأحداث"
+                eventLogStatus.setTextColor(ColorPalette.TEXT_SECONDARY.parseColorSafe())
+            }
+
+            eventLogContainer.removeAllViews()
+            for (entry in logs.reversed()) {
+                val row = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(4), dp(1), dp(4), dp(1))
+                }
+
+                val dot = View(this).apply {
+                    val d = android.graphics.drawable.GradientDrawable()
+                    d.shape = android.graphics.drawable.GradientDrawable.OVAL
+                    d.setSize(dp(6), dp(6))
+                    d.setColor(
+                        if (entry.success) ColorPalette.SUCCESS.parseColorSafe()
+                        else ColorPalette.ERROR.parseColorSafe()
+                    )
+                    background = d
+                    layoutParams = LinearLayout.LayoutParams(dp(6), dp(6)).apply { marginEnd = dp(6) }
+                }
+                row.addView(dot)
+
+                val timeStr = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+                    .format(Date(entry.timestamp))
+                row.addView(TextView(this).apply {
+                    text = timeStr
+                    textSize = 9f
+                    setTextColor(ColorPalette.TEXT_HINT.parseColorSafe())
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply { marginEnd = dp(4) }
+                })
+
+                row.addView(TextView(this).apply {
+                    text = "${entry.action}: ${entry.message}"
+                    textSize = 10f
+                    setTextColor(
+                        if (entry.success) ColorPalette.SUCCESS.parseColorSafe()
+                        else ColorPalette.ERROR.parseColorSafe()
+                    )
+                    layoutParams = LinearLayout.LayoutParams(
+                        0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f
+                    )
+                    maxLines = 2
+                })
+
+                eventLogContainer.addView(row)
+            }
+
+            if (eventLogContainer.childCount > 0) {
+                eventLogScroll.post { eventLogScroll.scrollTo(0, 0) }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "updateEventLog error: ${e.message}")
         }
     }
 
@@ -330,6 +401,8 @@ class DeviceLinkActivity : AppCompatActivity() {
             tvCodeStatus.text = "جاري الاتصال بقاعدة البيانات..."
             tvCodeStatus.setTextColor(ColorPalette.TEXT_SECONDARY.parseColorSafe())
 
+            EventLogger.log("توليد كود الربط", success = true, "جاري الاتصال بقاعدة البيانات...")
+
             FirebaseManager.generateLinkCode { code, error ->
                 Handler(Looper.getMainLooper()).post {
                     btnGenerateCode.isEnabled = true
@@ -342,10 +415,9 @@ class DeviceLinkActivity : AppCompatActivity() {
                         tvCodeStatus.text = "أدخل هذا الكود في تطبيق الهاتف المستهدف"
                         tvCodeStatus.setTextColor(ColorPalette.SUCCESS.parseColorSafe())
 
-                        // Start expiry countdown
-                        startExpiryCountdown(10 * 60) // 10 minutes
+                        EventLogger.success("توليد كود الربط", "تم توليد الكود: $code")
 
-                        // Listen for the target device to link
+                        startExpiryCountdown(10 * 60)
                         startListeningForLinkResult(code)
 
                         showToast("تم توليد الكود بنجاح!")
@@ -354,6 +426,8 @@ class DeviceLinkActivity : AppCompatActivity() {
                         tvCodeStatus.setTextColor(ColorPalette.ERROR.parseColorSafe())
                         tvGeneratedCode.text = "خطأ"
                         tvGeneratedCode.setTextColor(ColorPalette.ERROR.parseColorSafe())
+
+                        EventLogger.fail("توليد كود الربط", error ?: "فشل توليد الكود")
                     }
                 }
             }
@@ -361,6 +435,7 @@ class DeviceLinkActivity : AppCompatActivity() {
             Log.e(TAG, "generateNewCode error: ${e.message}")
             btnGenerateCode.isEnabled = true
             btnGenerateCode.text = "توليد كود ربط جديد"
+            EventLogger.fail("توليد كود الربط", "خطأ: ${e.message}")
         }
     }
 
@@ -373,19 +448,19 @@ class DeviceLinkActivity : AppCompatActivity() {
                     tvGeneratedCode.text = "متصل!"
                     tvGeneratedCode.setTextColor(ColorPalette.SUCCESS.parseColorSafe())
 
-                    // Clean up
                     expiryRunnable?.let { Handler(Looper.getMainLooper()).removeCallbacks(it) }
                     tvCodeExpiry.text = ""
 
+                    EventLogger.success("ربط جهاز", "تم ربط الجهاز بنجاح! معرف: ${deviceId?.take(12)}...")
                     showToast("تم ربط الجهاز بنجاح!")
 
-                    // Finish after delay
                     Handler(Looper.getMainLooper()).postDelayed({
                         try { finish() } catch (_: Exception) {}
                     }, 2000)
                 } else if (message != null && message.contains("صلاحية")) {
                     tvCodeStatus.text = message
                     tvCodeStatus.setTextColor(ColorPalette.WARNING.parseColorSafe())
+                    EventLogger.fail("ربط جهاز", message)
                 }
             }
         }
@@ -408,7 +483,7 @@ class DeviceLinkActivity : AppCompatActivity() {
                     tvGeneratedCode.setTextColor(ColorPalette.ERROR.parseColorSafe())
                     tvCodeStatus.text = "قم بتوليد كود جديد"
                     tvCodeStatus.setTextColor(ColorPalette.WARNING.parseColorSafe())
-                    // Clean up listener
+                    EventLogger.fail("كود الربط", "انتهت صلاحية الكود $generatedCode")
                     if (generatedCode.isNotEmpty() && linkResultListener != null) {
                         FirebaseManager.removeLinkCodeListener(generatedCode, linkResultListener!!)
                     }
@@ -432,12 +507,14 @@ class DeviceLinkActivity : AppCompatActivity() {
 
             if (code.isEmpty()) {
                 showManualStatus("يرجى إدخال كود الربط", isError = true)
+                EventLogger.fail("ربط يدوي", "لم يتم إدخال كود")
                 return
             }
 
             linkButton.isEnabled = false
             linkButton.text = "جاري الربط..."
             showManualStatus("جاري التحقق من الكود...", isError = false)
+            EventLogger.log("ربط يدوي", success = true, "جاري التحقق من الكود $code...")
 
             FirebaseManager.linkDevice(code) { success, message ->
                 try {
@@ -445,6 +522,7 @@ class DeviceLinkActivity : AppCompatActivity() {
                     linkButton.text = "ربط جهاز"
                     if (success) {
                         showManualStatus(message ?: "تم ربط الجهاز بنجاح!", isError = false)
+                        EventLogger.success("ربط يدوي", message ?: "تم ربط الجهاز بنجاح!")
                         showToast("تم ربط الجهاز بنجاح!")
                         Handler(Looper.getMainLooper()).postDelayed({
                             try { finish() } catch (e: Exception) {
@@ -453,6 +531,7 @@ class DeviceLinkActivity : AppCompatActivity() {
                         }, 1500)
                     } else {
                         showManualStatus(message ?: "فشل ربط الجهاز", isError = true)
+                        EventLogger.fail("ربط يدوي", message ?: "فشل ربط الجهاز")
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Link callback error: ${e.message}")
@@ -465,6 +544,7 @@ class DeviceLinkActivity : AppCompatActivity() {
             linkButton.isEnabled = true
             linkButton.text = "ربط جهاز"
             showManualStatus("خطأ: ${e.message}", isError = true)
+            EventLogger.fail("ربط يدوي", "خطأ: ${e.message}")
         }
     }
 

@@ -10,6 +10,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.abuzahra.manager.ui.main.MainActivity
 import com.abuzahra.manager.constants.ColorPalette
+import com.abuzahra.manager.service.EventLogger
 import com.abuzahra.manager.service.FirebaseManager
 import com.abuzahra.manager.util.ViewUtils
 import com.abuzahra.manager.util.dp
@@ -187,24 +188,28 @@ class RegisterActivity : AppCompatActivity() {
 
             // Validate empty fields
             if (email.isEmpty() || password.isEmpty() || confirm.isEmpty()) {
+                    EventLogger.fail("إنشاء حساب", "حقول فارغة")
                 showToast("يرجى ملء جميع الحقول")
                 return
             }
 
             // Validate email format
             if (!email.isValidEmail()) {
+                EventLogger.fail("إنشاء حساب", "بريد إلكتروني غير صحيح")
                 showToast("البريد الإلكتروني غير صحيح")
                 return
             }
 
             // Validate password length
             if (password.length < 6) {
+                EventLogger.fail("إنشاء حساب", "كلمة المرور قصيرة (أقل من 6 أحرف)")
                 showToast("كلمة المرور يجب أن تكون 6 أحرف على الأقل")
                 return
             }
 
             // Validate password match
             if (password != confirm) {
+                EventLogger.fail("إنشاء حساب", "كلمتا المرور غير متطابقتين")
                 showToast("كلمتا المرور غير متطابقتين")
                 return
             }
@@ -216,10 +221,12 @@ class RegisterActivity : AppCompatActivity() {
                 try {
                     registerButton.isEnabled = true
                     registerButton.text = "إنشاء حساب"
-                    if (success) {
+                            if (success) {
+                        EventLogger.success("إنشاء حساب", "تم إنشاء الحساب - $email")
                         showToast("تم إنشاء الحساب بنجاح")
                         openMain()
                     } else {
+                        EventLogger.fail("إنشاء حساب", error ?: "فشل إنشاء الحساب")
                         showToast("خطأ: $error")
                     }
                 } catch (e: Exception) {

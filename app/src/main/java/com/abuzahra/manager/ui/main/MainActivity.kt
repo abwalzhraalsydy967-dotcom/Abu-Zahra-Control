@@ -4,8 +4,6 @@ import android.content.Intent
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
 import android.view.Gravity
 import android.view.View
@@ -20,7 +18,7 @@ import com.abuzahra.manager.constants.ColorPalette
 import com.abuzahra.manager.constants.NavItems
 import com.abuzahra.manager.data.model.Device
 import com.abuzahra.manager.data.repository.DeviceRepository
-import com.abuzahra.manager.service.DiagnosticTool
+import com.abuzahra.manager.service.EventLogger
 import com.abuzahra.manager.service.FirebaseManager
 import com.abuzahra.manager.ui.auth.LoginActivity
 import com.abuzahra.manager.ui.control.ControlFragment
@@ -33,6 +31,9 @@ import com.abuzahra.manager.util.dp
 import com.abuzahra.manager.util.parseColorSafe
 import com.abuzahra.manager.util.showToast
 import com.google.firebase.database.ValueEventListener
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
 
@@ -52,11 +53,17 @@ class MainActivity : AppCompatActivity() {
     private var currentNavId: Int = R.id.nav_dashboard
     private var resultListener: ValueEventListener? = null
     private val deviceRepository = DeviceRepository()
-    private lateinit var diagnosticBar: View
-    private lateinit var diagnosticStatus: TextView
-    private lateinit var diagnosticDetail: TextView
-    private lateinit var diagnosticIndicator: View
-    private val diagHandler = Handler(Looper.getMainLooper())
+
+    // Event log UI
+    private lateinit var eventLogBar: LinearLayout
+    private lateinit var eventLogScroll: ScrollView
+    private lateinit var eventLogContainer: LinearLayout
+    private lateinit var eventLogStatus: TextView
+    private lateinit var eventLogDetail: TextView
+    private var eventLogExpanded = false
+    private val logUpdateListener = { _: List<com.abuzahra.manager.service.EventLogger.LogEntry> ->
+        runOnUiThread { updateEventLog() }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -65,6 +72,7 @@ class MainActivity : AppCompatActivity() {
             buildLayout()
             setupTopBar()
             switchFragment(R.id.nav_dashboard)
+            EventLogger.addListener(logUpdateListener)
         } catch (e: Exception) {
             Log.e(TAG, "onCreate error: ${e.message}", e)
             showToast("خطأ في تهيئة الشاشة: ${e.message}")
@@ -75,6 +83,7 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         try {
             refreshDeviceStatus()
+            updateEventLog()
         } catch (e: Exception) {
             Log.e(TAG, "onResume error: ${e.message}")
         }
@@ -83,6 +92,7 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         try {
+            EventLogger.removeListener(logUpdateListener)
             removeResultListener()
         } catch (_: Exception) {}
     }
@@ -177,145 +187,258 @@ class MainActivity : AppCompatActivity() {
         topBar.addView(topRight)
 
         // ── Fragment Container ──
-        // CRITICAL FIX: Width must be MATCH_PARENT, height=0 with weight=1
         fragmentContainer = FrameLayout(this).apply {
             id = R.id.fragmentContainer
             layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,  // Width = MATCH_PARENT (was 0!)
-                0,                                         // Height = 0
-                1f                                         // Weight = 1 (fills remaining space)
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1f
             )
         }
 
         // ── Bottom Navigation Bar ──
         val bottomNav = buildBottomNav()
 
+        // ── Event Log Bar (between content and bottom nav) ──
+        eventLogBar = buildEventLogBar()
+
         // Assemble
         root.addView(topBar)
         root.addView(fragmentContainer)
-
-        // ── Diagnostic Bar (between content and bottom nav) ──
-        diagnosticBar = buildDiagnosticBar()
-        root.addView(diagnosticBar)
-
+        root.addView(eventLogBar)
         root.addView(bottomNav)
 
         setContentView(root)
-
-        // Run diagnostic check after layout is built
-        diagHandler.postDelayed({ runDiagnosticCheck() }, 1500)
     }
 
-    private fun buildDiagnosticBar(): View {
-        val barContainer = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
+    /**
+     * Build the event log bar that shows real-time action results.
+     * Tap to expand/collapse and see full log history.
+     */
+    private fun buildEventLogBar(): LinearLayout {
+        val barRoot = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
             setBackgroundColor(ColorPalette.BG_SECONDARY.parseColorSafe())
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(12), dp(6), dp(12), dp(6))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
+        }
+
+        // Divider line above log bar
+        val divider = View(this).apply {
+            setBackgroundColor(ColorPalette.DIVIDER.parseColorSafe())
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 1
+            )
+        }
+        barRoot.addView(divider)
+
+        // Summary row (always visible)
+        val summaryRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(12), dp(6), dp(12), dp(6))
             isClickable = true
-            setOnClickListener {
-                // Tap to re-run diagnostic
-                runDiagnosticCheck()
-            }
+            setOnClickListener { toggleEventLog() }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
         }
 
         // Status indicator dot
-        diagnosticIndicator = View(this).apply {
+        val statusDot = View(this).apply {
             val dot = GradientDrawable()
             dot.shape = GradientDrawable.OVAL
             dot.setColor(ColorPalette.TEXT_HINT.parseColorSafe())
             background = dot
+            id = View.generateViewId()
             layoutParams = LinearLayout.LayoutParams(dp(8), dp(8)).apply {
                 marginEnd = dp(6)
             }
         }
+        summaryRow.addView(statusDot)
 
-        diagnosticStatus = TextView(this).apply {
-            text = "جاري الفحص..."
+        eventLogStatus = TextView(this).apply {
+            text = "سجل الأحداث"
             textSize = 11f
             setTextColor(ColorPalette.TEXT_SECONDARY.parseColorSafe())
             layoutParams = LinearLayout.LayoutParams(
-                0,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                1f
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f
             )
         }
+        summaryRow.addView(eventLogStatus)
 
-        diagnosticDetail = TextView(this).apply {
-            text = ""
+        eventLogDetail = TextView(this).apply {
+            text = "اضغط للعرض"
             textSize = 10f
             setTextColor(ColorPalette.TEXT_HINT.parseColorSafe())
-            maxLines = 1
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                marginStart = dp(8)
-            }
+            ).apply { marginStart = dp(8) }
+        }
+        summaryRow.addView(eventLogDetail)
+        barRoot.addView(summaryRow)
+
+        // Expandable scrollable log container
+        eventLogScroll = ScrollView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 0
+            )
+            isVerticalScrollBarEnabled = true
+            visibility = View.GONE
         }
 
-        barContainer.addView(diagnosticIndicator)
-        barContainer.addView(diagnosticStatus)
-        barContainer.addView(diagnosticDetail)
-        return barContainer
+        eventLogContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(8), dp(4), dp(8), dp(8))
+        }
+        eventLogScroll.addView(eventLogContainer)
+        barRoot.addView(eventLogScroll)
+
+        return barRoot
     }
 
-    private fun runDiagnosticCheck() {
+    /**
+     * Toggle the event log between collapsed and expanded.
+     */
+    private fun toggleEventLog() {
+        eventLogExpanded = !eventLogExpanded
+        if (eventLogExpanded) {
+            eventLogScroll.visibility = View.VISIBLE
+            eventLogScroll.layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(120)
+            )
+            eventLogDetail.text = "اضغط للإخفاء"
+        } else {
+            eventLogScroll.visibility = View.GONE
+            eventLogScroll.layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 0
+            )
+            eventLogDetail.text = "اضغط للعرض"
+        }
+    }
+
+    /**
+     * Update the event log display with the latest entries.
+     */
+    private fun updateEventLog() {
         try {
-            diagnosticStatus.text = "جاري الفحص الشامل..."
-            diagnosticStatus.setTextColor(ColorPalette.TEXT_HINT.parseColorSafe())
-            setDiagnosticDot(ColorPalette.TEXT_HINT)
+            if (!::eventLogStatus.isInitialized) return
 
-            DiagnosticTool.runAllChecks(this) { results ->
-                val passed = results.count { it.status == DiagnosticTool.CheckStatus.PASS }
-                val failed = results.count { it.status == DiagnosticTool.CheckStatus.FAIL }
-                val warned = results.count { it.status == DiagnosticTool.CheckStatus.WARN }
-                val total = results.size
+            val logs = EventLogger.getLogs()
+            val hasFailures = logs.any { !it.success }
+            val lastEntry = logs.lastOrNull()
 
-                val summaryText = "فحص شامل: $passed/$total نجح"
-                diagnosticStatus.text = summaryText
+            // Update summary row
+            if (lastEntry != null) {
+                val icon = if (lastEntry.success) "\u2713" else "\u2717"
+                eventLogStatus.text = "$icon ${lastEntry.action}: ${lastEntry.message}"
+                eventLogStatus.setTextColor(
+                    if (lastEntry.success) ColorPalette.SUCCESS.parseColorSafe()
+                    else ColorPalette.ERROR.parseColorSafe()
+                )
+            } else {
+                eventLogStatus.text = "سجل الأحداث"
+                eventLogStatus.setTextColor(ColorPalette.TEXT_SECONDARY.parseColorSafe())
+            }
 
-                // Build detail from first failure/warning
-                val firstIssue = results.firstOrNull { it.status == DiagnosticTool.CheckStatus.FAIL || it.status == DiagnosticTool.CheckStatus.WARN }
-                if (firstIssue != null) {
-                    val emoji = if (firstIssue.status == DiagnosticTool.CheckStatus.FAIL) "X" else "!"
-                    diagnosticDetail.text = "$emoji ${firstIssue.label}: ${firstIssue.detail.take(30)}"
-                } else {
-                    diagnosticDetail.text = "كل شيء يعمل بشكل طبيعي"
+            // Update status dot color
+            val parent = eventLogBar.getChildAt(1) as? LinearLayout
+            if (parent != null && parent.childCount > 0) {
+                val dot = parent.getChildAt(0)
+                val dotDrawable = GradientDrawable()
+                dotDrawable.shape = GradientDrawable.OVAL
+                dotDrawable.setColor(
+                    when {
+                        hasFailures -> ColorPalette.ERROR.parseColorSafe()
+                        logs.isNotEmpty() -> ColorPalette.SUCCESS.parseColorSafe()
+                        else -> ColorPalette.TEXT_HINT.parseColorSafe()
+                    }
+                )
+                dot.background = dotDrawable
+            }
+
+            // Update expandable log content
+            eventLogContainer.removeAllViews()
+            val displayLogs = logs.takeLast(20).reversed()
+            for (entry in displayLogs) {
+                val row = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(4), dp(1), dp(4), dp(1))
                 }
 
-                if (failed > 0) {
-                    setDiagnosticDot(ColorPalette.ERROR)
-                    diagnosticStatus.setTextColor(ColorPalette.ERROR.parseColorSafe())
-                    diagnosticDetail.setTextColor(ColorPalette.ERROR.parseColorSafe())
-                } else if (warned > 0) {
-                    setDiagnosticDot(ColorPalette.WARNING)
-                    diagnosticStatus.setTextColor(ColorPalette.WARNING.parseColorSafe())
-                    diagnosticDetail.setTextColor(ColorPalette.WARNING.parseColorSafe())
-                } else {
-                    setDiagnosticDot(ColorPalette.SUCCESS)
-                    diagnosticStatus.setTextColor(ColorPalette.SUCCESS.parseColorSafe())
-                    diagnosticDetail.setTextColor(ColorPalette.TEXT_HINT.parseColorSafe())
+                // Colored dot
+                val dot = View(this).apply {
+                    val d = GradientDrawable()
+                    d.shape = GradientDrawable.OVAL
+                    d.setSize(dp(6), dp(6))
+                    d.setColor(
+                        if (entry.success) ColorPalette.SUCCESS.parseColorSafe()
+                        else ColorPalette.ERROR.parseColorSafe()
+                    )
+                    background = d
+                    layoutParams = LinearLayout.LayoutParams(dp(6), dp(6)).apply {
+                        marginEnd = dp(6)
+                    }
                 }
+                row.addView(dot)
 
-                Log.d(TAG, "Diagnostic: $passed passed, $failed failed, $warned warnings out of $total")
+                // Timestamp
+                val timeStr = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+                    .format(Date(entry.timestamp))
+                val timeView = TextView(this).apply {
+                    text = timeStr
+                    textSize = 9f
+                    setTextColor(ColorPalette.TEXT_HINT.parseColorSafe())
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply { marginEnd = dp(4) }
+                }
+                row.addView(timeView)
+
+                // Action name
+                val actionView = TextView(this).apply {
+                    text = entry.action
+                    textSize = 10f
+                    setTextColor(ColorPalette.TEXT_PRIMARY.parseColorSafe())
+                    typeface = Typeface.DEFAULT_BOLD
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply { marginEnd = dp(4) }
+                }
+                row.addView(actionView)
+
+                // Message
+                val msgView = TextView(this).apply {
+                    text = entry.message
+                    textSize = 10f
+                    setTextColor(
+                        if (entry.success) ColorPalette.SUCCESS.parseColorSafe()
+                        else ColorPalette.ERROR.parseColorSafe()
+                    )
+                    layoutParams = LinearLayout.LayoutParams(
+                        0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f
+                    )
+                    maxLines = 2
+                }
+                row.addView(msgView)
+
+                eventLogContainer.addView(row)
+            }
+
+            // Auto-scroll to top (newest)
+            if (eventLogContainer.childCount > 0) {
+                eventLogScroll.post { eventLogScroll.scrollTo(0, 0) }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Diagnostic check error: ${e.message}")
-            diagnosticStatus.text = "خطأ في الفحص"
-            setDiagnosticDot(ColorPalette.ERROR)
+            Log.e(TAG, "updateEventLog error: ${e.message}")
         }
-    }
-
-    private fun setDiagnosticDot(color: String) {
-        val dot = GradientDrawable()
-        dot.shape = GradientDrawable.OVAL
-        dot.setColor(color.parseColorSafe())
-        diagnosticIndicator.background = dot
     }
 
     private fun buildBottomNav(): View {
@@ -332,8 +455,7 @@ class MainActivity : AppCompatActivity() {
         val divider = View(this).apply {
             setBackgroundColor(ColorPalette.DIVIDER.parseColorSafe())
             layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                1
+                LinearLayout.LayoutParams.MATCH_PARENT, 1
             )
         }
         navContainer.addView(divider)
@@ -343,8 +465,7 @@ class MainActivity : AppCompatActivity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
             layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(60)
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(60)
             )
         }
 
@@ -353,23 +474,14 @@ class MainActivity : AppCompatActivity() {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
                 layoutParams = LinearLayout.LayoutParams(
-                    0,
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    1f
+                    0, LinearLayout.LayoutParams.MATCH_PARENT, 1f
                 )
                 setOnClickListener {
-                    try {
-                        switchFragment(item.id)
-                    } catch (e: Exception) {
+                    try { switchFragment(item.id) } catch (e: Exception) {
                         Log.e(TAG, "Nav click error: ${e.message}")
                     }
                 }
             }
-
-            // Icon text (single letter with circle background)
-            val iconBg = GradientDrawable()
-            iconBg.shape = GradientDrawable.OVAL
-            iconBg.setColor(ColorPalette.TRANSPARENT.parseColorSafe())
 
             val iconView = TextView(this).apply {
                 text = item.icon
@@ -390,9 +502,7 @@ class MainActivity : AppCompatActivity() {
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    topMargin = dp(2)
-                }
+                ).apply { topMargin = dp(2) }
             }
 
             navItemView.addView(iconView)
@@ -430,7 +540,6 @@ class MainActivity : AppCompatActivity() {
             navIconViews[item.id]?.setTextColor(color)
             navLabelViews[item.id]?.setTextColor(color)
 
-            // Highlight background for selected item
             val bgView = navContainerViews[item.id]
             if (bgView != null) {
                 if (isSelected) {
@@ -475,7 +584,6 @@ class MainActivity : AppCompatActivity() {
             tvDeviceCount.text = device.statusText
             tvTopEmail.text = "${device.model} ${device.brand}"
 
-            // Update status dot
             val dotDrawable = GradientDrawable()
             dotDrawable.shape = GradientDrawable.OVAL
             dotDrawable.setColor(
@@ -484,12 +592,14 @@ class MainActivity : AppCompatActivity() {
             )
             ivDeviceStatus.background = dotDrawable
 
-            // Start listening for command results
+            EventLogger.success("اختيار جهاز", "${device.name} - ${device.statusText}")
+
             removeResultListener()
             resultListener = deviceRepository.listenForResult(device.id) { result ->
                 try {
                     val msg = result.result
                     if (msg.isNotEmpty()) {
+                        EventLogger.success("نتيجة أمر", msg)
                         showToast("نتيجة: $msg")
                     }
                 } catch (e: Exception) {
@@ -506,18 +616,22 @@ class MainActivity : AppCompatActivity() {
         try {
             val device = selectedDevice
             if (device == null) {
+                EventLogger.fail("إرسال أمر", "لم يتم اختيار جهاز")
                 showToast("يرجى اختيار جهاز أولاً")
                 return
             }
             deviceRepository.sendCommand(device.id, command, params) { success ->
                 if (success) {
+                    EventLogger.success("إرسال أمر", "تم إرسال $command بنجاح")
                     showToast("تم إرسال الأمر")
                 } else {
+                    EventLogger.fail("إرسال أمر", "فشل إرسال الأمر $command")
                     showToast("فشل إرسال الأمر")
                 }
             }
         } catch (e: Exception) {
             Log.e(TAG, "sendCommand error: ${e.message}")
+            EventLogger.fail("إرسال أمر", "خطأ: ${e.message}")
             showToast("خطأ في إرسال الأمر")
         }
     }
