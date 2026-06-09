@@ -10,7 +10,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:787676787951:android:e583411c93e5c76694171a",
         "android_client_info": {
-          "package_name": "com.abuzahra.control"
+          "package_name": "com.abuzahra.manager"
         }
       },
       "oauth_client": [
@@ -18,7 +18,7 @@
           "client_id": "787676787951-20uf0a81hb0n5b95t9htb7cd073lu2bm.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.abuzahra.control",
+            "package_name": "com.abuzahra.manager",
             "certificate_hash": "c2eda40b851f6efd5cede097ac08bc56d2c4fdee"
           }
         },

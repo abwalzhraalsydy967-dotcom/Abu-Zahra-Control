@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.abuzahra.app"
+    namespace = "com.abuzahra.tracker"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.abuzahra.app"
+        applicationId = "com.abuzahra.tracker"
         minSdk = 26
         targetSdk = 34
         versionCode = 2

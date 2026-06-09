@@ -5,10 +5,10 @@ plugins {
 }
 
 android {
-    namespace = "com.abuzahra.control"
+    namespace = "com.abuzahra.manager"
     compileSdk = 34
     defaultConfig {
-        applicationId = "com.abuzahra.control"
+        applicationId = "com.abuzahra.manager"
         minSdk = 24
         targetSdk = 34
         versionCode = 16
