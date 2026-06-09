@@ -45,11 +45,12 @@ jobs:
         run: chmod +x gradlew
 
       - name: Print SHA1 Keys
+        continue-on-error: true
         run: |
           echo "============================================================"
           echo "  SHA1 FINGERPRINTS - For Firebase Console"
           echo "============================================================"
-          ./gradlew printSha1Keys
+          ./gradlew printSha1Keys || echo "SHA1 print failed (non-critical)"
           echo "============================================================"
           echo "  IMPORTANT: Copy SHA1 keys above to Firebase Console"
           echo "  https://console.firebase.google.com"
@@ -149,11 +150,12 @@ jobs:
         run: chmod +x gradlew
 
       - name: Print SHA1 Keys
+        continue-on-error: true
         run: |
           echo "============================================================"
           echo "  SHA1 FINGERPRINTS - For Firebase Console"
           echo "============================================================"
-          ./gradlew printSha1Keys
+          ./gradlew printSha1Keys || echo "SHA1 print failed (non-critical)"
 
       - name: Build Target Device Release APK
         run: |
