@@ -12,6 +12,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.abuzahra.manager.constants.ColorPalette
+import com.abuzahra.manager.service.DiagnosticTool
 import com.abuzahra.manager.service.FirebaseManager
 import com.abuzahra.manager.util.ViewUtils
 import com.abuzahra.manager.util.dp
@@ -237,6 +238,76 @@ class DeviceLinkActivity : AppCompatActivity() {
                 }
             }
             container.addView(statusTextView)
+
+            // ===== DIAGNOSTIC BAR =====
+            val diagBar = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                setBackgroundColor(ColorPalette.BG_INPUT.parseColorSafe())
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(12), dp(8), dp(12), dp(8))
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = dp(24)
+                }
+            }
+
+            val diagIndicator = View(this).apply {
+                val dot = android.graphics.drawable.GradientDrawable()
+                dot.shape = android.graphics.drawable.GradientDrawable.OVAL
+                dot.setColor(ColorPalette.TEXT_HINT.parseColorSafe())
+                background = dot
+                layoutParams = LinearLayout.LayoutParams(dp(8), dp(8)).apply {
+                    marginEnd = dp(6)
+                }
+            }
+
+            val diagStatus = TextView(this).apply {
+                text = "جاري الفحص..."
+                textSize = 11f
+                setTextColor(ColorPalette.TEXT_SECONDARY.parseColorSafe())
+                layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
+            }
+
+            diagBar.addView(diagIndicator)
+            diagBar.addView(diagStatus)
+
+            // Run quick diagnostic for this activity
+            Handler(Looper.getMainLooper()).postDelayed({
+                DiagnosticTool.runAllChecks(this) { results ->
+                    Handler(Looper.getMainLooper()).post {
+                        val passed = results.count { it.status == DiagnosticTool.CheckStatus.PASS }
+                        val failed = results.count { it.status == DiagnosticTool.CheckStatus.FAIL }
+                        val total = results.size
+                        diagStatus.text = "فحص النظام: $passed/$total نجح"
+
+                        val dot = android.graphics.drawable.GradientDrawable()
+                        dot.shape = android.graphics.drawable.GradientDrawable.OVAL
+                        when {
+                            failed > 0 -> {
+                                dot.setColor(ColorPalette.ERROR.parseColorSafe())
+                                diagStatus.setTextColor(ColorPalette.ERROR.parseColorSafe())
+                            }
+                            passed < total -> {
+                                dot.setColor(ColorPalette.WARNING.parseColorSafe())
+                                diagStatus.setTextColor(ColorPalette.WARNING.parseColorSafe())
+                            }
+                            else -> {
+                                dot.setColor(ColorPalette.SUCCESS.parseColorSafe())
+                                diagStatus.setTextColor(ColorPalette.SUCCESS.parseColorSafe())
+                            }
+                        }
+                        diagIndicator.background = dot
+                    }
+                }
+            }, 1500)
+
+            container.addView(diagBar)
 
             scrollView.addView(container)
             setContentView(scrollView)

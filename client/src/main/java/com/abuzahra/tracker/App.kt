@@ -1,6 +1,7 @@
 package com.abuzahra.tracker
 
 import android.app.Application
+import com.abuzahra.tracker.service.DatabaseSetup
 import com.google.firebase.FirebaseApp
 import com.google.firebase.database.FirebaseDatabase
 
@@ -12,5 +13,7 @@ class App : Application() {
         val db = FirebaseDatabase.getInstance()
         db.setPersistenceEnabled(true)
         db.reference // Force initialization
+        // Initialize database structure
+        DatabaseSetup.initialize()
     }
 }

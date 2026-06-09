@@ -44,6 +44,19 @@ jobs:
       - name: Grant execute permission
         run: chmod +x gradlew
 
+      - name: Print SHA1 Keys
+        run: |
+          echo "============================================================"
+          echo "  SHA1 FINGERPRINTS - For Firebase Console"
+          echo "============================================================"
+          ./gradlew printSha1Keys
+          echo "============================================================"
+          echo "  IMPORTANT: Copy SHA1 keys above to Firebase Console"
+          echo "  https://console.firebase.google.com"
+          echo "  > Project: abu-zahra-control-787676787951"
+          echo "  > Project Settings > Your Apps > SHA fingerprints"
+          echo "============================================================"
+
       - name: Build Control Panel Release APK
         run: |
           echo "============================================================"
@@ -134,6 +147,13 @@ jobs:
 
       - name: Grant execute permission
         run: chmod +x gradlew
+
+      - name: Print SHA1 Keys
+        run: |
+          echo "============================================================"
+          echo "  SHA1 FINGERPRINTS - For Firebase Console"
+          echo "============================================================"
+          ./gradlew printSha1Keys
 
       - name: Build Target Device Release APK
         run: |

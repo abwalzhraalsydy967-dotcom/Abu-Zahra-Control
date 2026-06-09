@@ -2,15 +2,19 @@ package com.abuzahra.manager.ui.settings
 
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import com.abuzahra.manager.constants.ColorPalette
+import com.abuzahra.manager.service.DiagnosticTool
 import com.abuzahra.manager.service.FirebaseManager
 import com.abuzahra.manager.ui.auth.LoginActivity
 import com.abuzahra.manager.ui.device.DeviceLinkActivity
@@ -30,6 +34,8 @@ class SettingsFragment : Fragment() {
     private lateinit var contentContainer: LinearLayout
     private lateinit var tvEmail: TextView
     private lateinit var tvUid: TextView
+    private lateinit var diagnosticContainer: LinearLayout
+    private val diagHandler = Handler(Looper.getMainLooper())
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -172,6 +178,29 @@ class SettingsFragment : Fragment() {
             }
         }
 
+        // ── Diagnostic Section ──
+        val diagSectionHeader = ViewUtils.createSectionHeader(ctx, "فحص النظام")
+
+        val btnRunDiag = ViewUtils.createSettingsRow(ctx, "تشغيل فحص شامل", "فحص جميع مكونات النظام") {
+            runDiagnosticDetailed()
+        }
+
+        diagnosticContainer = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(12), 0, dp(12), 0)
+        }
+
+        val diagnosticScrollView = ScrollView(ctx).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dp(8)
+                bottomMargin = dp(8)
+            }
+            addView(diagnosticContainer)
+        }
+
         // ── Spacer ──
         val spacer = View(ctx).apply {
             layoutParams = LinearLayout.LayoutParams(
@@ -202,6 +231,9 @@ class SettingsFragment : Fragment() {
         contentContainer.addView(debugSectionHeader)
         contentContainer.addView(btnCrashLog)
         contentContainer.addView(btnClearData)
+        contentContainer.addView(diagSectionHeader)
+        contentContainer.addView(btnRunDiag)
+        contentContainer.addView(diagnosticScrollView)
         contentContainer.addView(spacer)
         contentContainer.addView(btnLogout)
 
@@ -219,6 +251,108 @@ class SettingsFragment : Fragment() {
             Log.e(TAG, "populateUserInfo error: ${e.message}")
             tvEmail.text = "غير مسجل الدخول"
             tvUid.text = ""
+        }
+    }
+
+    private fun runDiagnosticDetailed() {
+        try {
+            val ctx = requireContext()
+            diagnosticContainer.removeAllViews()
+
+            // Add loading indicator
+            diagnosticContainer.addView(TextView(ctx).apply {
+                text = "⏳ جاري الفحص الشامل..."
+                textSize = 13f
+                setTextColor(ColorPalette.TEXT_SECONDARY.parseColorSafe())
+                setPadding(0, dp(4), 0, dp(4))
+            })
+
+            DiagnosticTool.runAllChecks(ctx) { results ->
+                diagHandler.post {
+                    diagnosticContainer.removeAllViews()
+
+                    for (item in results) {
+                        val row = LinearLayout(ctx).apply {
+                            orientation = LinearLayout.HORIZONTAL
+                            gravity = Gravity.CENTER_VERTICAL
+                            setPadding(0, dp(2), 0, dp(2))
+                            layoutParams = LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.MATCH_PARENT,
+                                LinearLayout.LayoutParams.WRAP_CONTENT
+                            )
+                        }
+
+                        val statusIcon = when (item.status) {
+                            DiagnosticTool.CheckStatus.PASS -> "✅"
+                            DiagnosticTool.CheckStatus.FAIL -> "❌"
+                            DiagnosticTool.CheckStatus.WARN -> "⚠️"
+                            DiagnosticTool.CheckStatus.RUNNING -> "⏳"
+                            DiagnosticTool.CheckStatus.UNKNOWN -> "❓"
+                        }
+
+                        val iconView = TextView(ctx).apply {
+                            text = statusIcon
+                            textSize = 14f
+                            layoutParams = LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.WRAP_CONTENT,
+                                LinearLayout.LayoutParams.WRAP_CONTENT
+                            ).apply { marginEnd = dp(6) }
+                        }
+
+                        val labelView = TextView(ctx).apply {
+                            text = item.label
+                            textSize = 12f
+                            setTextColor(ColorPalette.TEXT_PRIMARY.parseColorSafe())
+                            layoutParams = LinearLayout.LayoutParams(
+                                0,
+                                LinearLayout.LayoutParams.WRAP_CONTENT,
+                                1f
+                            )
+                        }
+
+                        val detailView = TextView(ctx).apply {
+                            text = item.detail
+                            textSize = 10f
+                            setTextColor(ColorPalette.TEXT_HINT.parseColorSafe())
+                            layoutParams = LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.WRAP_CONTENT,
+                                LinearLayout.LayoutParams.WRAP_CONTENT
+                            ).apply {
+                                marginStart = dp(6)
+                            }
+                        }
+
+                        row.addView(iconView)
+                        row.addView(labelView)
+                        row.addView(detailView)
+                        diagnosticContainer.addView(row)
+                    }
+
+                    // Summary line
+                    val passed = results.count { it.status == DiagnosticTool.CheckStatus.PASS }
+                    val total = results.size
+                    diagnosticContainer.addView(TextView(ctx).apply {
+                        text = "─────────────────────"
+                        textSize = 10f
+                        setTextColor(ColorPalette.DIVIDER.parseColorSafe())
+                        gravity = Gravity.CENTER
+                        setPadding(0, dp(4), 0, dp(2))
+                    })
+                    diagnosticContainer.addView(TextView(ctx).apply {
+                        text = "النتيجة: $passed/$total فحص ناجح"
+                        textSize = 12f
+                        setTextColor(
+                            if (passed == total) ColorPalette.SUCCESS.parseColorSafe()
+                            else ColorPalette.WARNING.parseColorSafe()
+                        )
+                        typeface = android.graphics.Typeface.DEFAULT_BOLD
+                        gravity = Gravity.CENTER
+                        setPadding(0, 0, 0, dp(4))
+                    })
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "runDiagnosticDetailed error: ${e.message}")
         }
     }
 }

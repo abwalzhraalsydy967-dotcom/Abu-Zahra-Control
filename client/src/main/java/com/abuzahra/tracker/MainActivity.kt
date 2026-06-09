@@ -5,6 +5,8 @@ import android.app.ActivityManager
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -13,6 +15,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import com.abuzahra.tracker.service.DiagnosticTool
 import com.abuzahra.tracker.service.FirebaseListenerService
 import com.abuzahra.tracker.utils.DeviceInfo
 import com.abuzahra.tracker.utils.NotificationHelper
@@ -29,12 +32,17 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnPermissions: Button
     private lateinit var tvPermStatus: TextView
     private lateinit var permissionsContainer: LinearLayout
+    private lateinit var diagnosticStatus: TextView
+    private lateinit var diagnosticDetail: TextView
+    private val diagHandler = Handler(Looper.getMainLooper())
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         buildUI()
         updatePermStatus()
         updateDeviceInfo()
+        // Run diagnostic after a short delay
+        diagHandler.postDelayed({ runDiagnosticCheck() }, 2000)
     }
 
     private fun buildUI() {
@@ -181,6 +189,46 @@ class MainActivity : AppCompatActivity() {
         }
         mainLayout.addView(btnStart)
 
+        // ===== DIAGNOSTIC SECTION =====
+        mainLayout.addView(TextView(this).apply {
+            text = "🔍 فحص شامل للنظام"
+            textSize = 16f
+            setTextColor(0xFFFFFFFF.toInt())
+            setTypeface(android.graphics.Typeface.DEFAULT_BOLD)
+            setPadding(0, 24, 0, 8)
+        })
+
+        // Diagnostic container
+        val diagnosticContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(0xFF1E1E2E.toInt())
+            setPadding(16, 12, 16, 12)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, 0, 0, 16) }
+            isClickable = true
+            setOnClickListener { runDiagnosticCheck() }
+        }
+
+        diagnosticStatus = TextView(this).apply {
+            text = "جاري الفحص..."
+            textSize = 13f
+            setTextColor(0xFF71717A.toInt())
+            setTypeface(android.graphics.Typeface.DEFAULT_BOLD)
+        }
+        diagnosticContainer.addView(diagnosticStatus)
+
+        diagnosticDetail = TextView(this).apply {
+            text = "اضغط لإعادة الفحص"
+            textSize = 11f
+            setTextColor(0xFF52525B.toInt())
+            setPadding(0, 4, 0, 0)
+        }
+        diagnosticContainer.addView(diagnosticDetail)
+
+        mainLayout.addView(diagnosticContainer)
+
         // Version
         mainLayout.addView(TextView(this).apply {
             text = "v1.1.0"
@@ -252,6 +300,50 @@ class MainActivity : AppCompatActivity() {
             tvPermStatus.setTextColor(0xFFF59E0B.toInt())
         } else {
             tvPermStatus.setTextColor(0xFFE63946.toInt())
+        }
+    }
+
+    private fun runDiagnosticCheck() {
+        try {
+            diagnosticStatus.text = "جاري الفحص الشامل..."
+            diagnosticStatus.setTextColor(0xFF71717A.toInt())
+            diagnosticDetail.text = ""
+
+            DiagnosticTool.runAllChecks(this) { results ->
+                val passed = results.count { it.status == DiagnosticTool.CheckStatus.PASS }
+                val failed = results.count { it.status == DiagnosticTool.CheckStatus.FAIL }
+                val warned = results.count { it.status == DiagnosticTool.CheckStatus.WARN }
+                val total = results.size
+
+                diagnosticStatus.text = "فحص شامل: $passed/$total نجح"
+
+                // Show failures and warnings
+                val issues = results.filter {
+                    it.status == DiagnosticTool.CheckStatus.FAIL || it.status == DiagnosticTool.CheckStatus.WARN
+                }
+
+                if (issues.isEmpty()) {
+                    diagnosticDetail.text = "كل شيء يعمل بشكل طبيعي ✅"
+                    diagnosticStatus.setTextColor(0xFF22C55E.toInt())
+                    diagnosticDetail.setTextColor(0xFF22C55E.toInt())
+                } else {
+                    val issueText = issues.take(3).joinToString("\n") {
+                        val icon = if (it.status == DiagnosticTool.CheckStatus.FAIL) "❌" else "⚠️"
+                        "$icon ${it.label}: ${it.detail}"
+                    }
+                    diagnosticDetail.text = issueText
+                    if (failed > 0) {
+                        diagnosticStatus.setTextColor(0xFFE63946.toInt())
+                        diagnosticDetail.setTextColor(0xFFE63946.toInt())
+                    } else {
+                        diagnosticStatus.setTextColor(0xFFF59E0B.toInt())
+                        diagnosticDetail.setTextColor(0xFFF59E0B.toInt())
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            diagnosticStatus.text = "خطأ في الفحص"
+            diagnosticStatus.setTextColor(0xFFE63946.toInt())
         }
     }
 

@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import android.util.Log
 import com.abuzahra.manager.service.CrashHandler
+import com.abuzahra.manager.service.DatabaseSetup
 import com.abuzahra.manager.util.PrefsManager
 
 class App : Application() {
@@ -19,6 +20,7 @@ class App : Application() {
         try {
             CrashHandler.install(this)
             PrefsManager.init(this)
+            DatabaseSetup.initialize()
             Log.d(TAG, "App initialized successfully")
         } catch (t: Throwable) {
             Log.e(TAG, "App init error: ${t.javaClass.simpleName}: ${t.message}")

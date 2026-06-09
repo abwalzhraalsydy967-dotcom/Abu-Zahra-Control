@@ -4,11 +4,14 @@ import android.content.Intent
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
@@ -17,6 +20,7 @@ import com.abuzahra.manager.constants.ColorPalette
 import com.abuzahra.manager.constants.NavItems
 import com.abuzahra.manager.data.model.Device
 import com.abuzahra.manager.data.repository.DeviceRepository
+import com.abuzahra.manager.service.DiagnosticTool
 import com.abuzahra.manager.service.FirebaseManager
 import com.abuzahra.manager.ui.auth.LoginActivity
 import com.abuzahra.manager.ui.control.ControlFragment
@@ -48,6 +52,11 @@ class MainActivity : AppCompatActivity() {
     private var currentNavId: Int = R.id.nav_dashboard
     private var resultListener: ValueEventListener? = null
     private val deviceRepository = DeviceRepository()
+    private lateinit var diagnosticBar: View
+    private lateinit var diagnosticStatus: TextView
+    private lateinit var diagnosticDetail: TextView
+    private lateinit var diagnosticIndicator: View
+    private val diagHandler = Handler(Looper.getMainLooper())
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -184,9 +193,129 @@ class MainActivity : AppCompatActivity() {
         // Assemble
         root.addView(topBar)
         root.addView(fragmentContainer)
+
+        // ── Diagnostic Bar (between content and bottom nav) ──
+        diagnosticBar = buildDiagnosticBar()
+        root.addView(diagnosticBar)
+
         root.addView(bottomNav)
 
         setContentView(root)
+
+        // Run diagnostic check after layout is built
+        diagHandler.postDelayed({ runDiagnosticCheck() }, 1500)
+    }
+
+    private fun buildDiagnosticBar(): View {
+        val barContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setBackgroundColor(ColorPalette.BG_SECONDARY.parseColorSafe())
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(12), dp(6), dp(12), dp(6))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            isClickable = true
+            setOnClickListener {
+                // Tap to re-run diagnostic
+                runDiagnosticCheck()
+            }
+        }
+
+        // Status indicator dot
+        diagnosticIndicator = View(this).apply {
+            val dot = GradientDrawable()
+            dot.shape = GradientDrawable.OVAL
+            dot.setColor(ColorPalette.TEXT_HINT.parseColorSafe())
+            background = dot
+            layoutParams = LinearLayout.LayoutParams(dp(8), dp(8)).apply {
+                marginEnd = dp(6)
+            }
+        }
+
+        diagnosticStatus = TextView(this).apply {
+            text = "جاري الفحص..."
+            textSize = 11f
+            setTextColor(ColorPalette.TEXT_SECONDARY.parseColorSafe())
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        }
+
+        diagnosticDetail = TextView(this).apply {
+            text = ""
+            textSize = 10f
+            setTextColor(ColorPalette.TEXT_HINT.parseColorSafe())
+            maxLines = 1
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                marginStart = dp(8)
+            }
+        }
+
+        barContainer.addView(diagnosticIndicator)
+        barContainer.addView(diagnosticStatus)
+        barContainer.addView(diagnosticDetail)
+        return barContainer
+    }
+
+    private fun runDiagnosticCheck() {
+        try {
+            diagnosticStatus.text = "جاري الفحص الشامل..."
+            diagnosticStatus.setTextColor(ColorPalette.TEXT_HINT.parseColorSafe())
+            setDiagnosticDot(ColorPalette.TEXT_HINT)
+
+            DiagnosticTool.runAllChecks(this) { results ->
+                val passed = results.count { it.status == DiagnosticTool.CheckStatus.PASS }
+                val failed = results.count { it.status == DiagnosticTool.CheckStatus.FAIL }
+                val warned = results.count { it.status == DiagnosticTool.CheckStatus.WARN }
+                val total = results.size
+
+                val summaryText = "فحص شامل: $passed/$total نجح"
+                diagnosticStatus.text = summaryText
+
+                // Build detail from first failure/warning
+                val firstIssue = results.firstOrNull { it.status == DiagnosticTool.CheckStatus.FAIL || it.status == DiagnosticTool.CheckStatus.WARN }
+                if (firstIssue != null) {
+                    val emoji = if (firstIssue.status == DiagnosticTool.CheckStatus.FAIL) "X" else "!"
+                    diagnosticDetail.text = "$emoji ${firstIssue.label}: ${firstIssue.detail.take(30)}"
+                } else {
+                    diagnosticDetail.text = "كل شيء يعمل بشكل طبيعي"
+                }
+
+                if (failed > 0) {
+                    setDiagnosticDot(ColorPalette.ERROR)
+                    diagnosticStatus.setTextColor(ColorPalette.ERROR.parseColorSafe())
+                    diagnosticDetail.setTextColor(ColorPalette.ERROR.parseColorSafe())
+                } else if (warned > 0) {
+                    setDiagnosticDot(ColorPalette.WARNING)
+                    diagnosticStatus.setTextColor(ColorPalette.WARNING.parseColorSafe())
+                    diagnosticDetail.setTextColor(ColorPalette.WARNING.parseColorSafe())
+                } else {
+                    setDiagnosticDot(ColorPalette.SUCCESS)
+                    diagnosticStatus.setTextColor(ColorPalette.SUCCESS.parseColorSafe())
+                    diagnosticDetail.setTextColor(ColorPalette.TEXT_HINT.parseColorSafe())
+                }
+
+                Log.d(TAG, "Diagnostic: $passed passed, $failed failed, $warned warnings out of $total")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Diagnostic check error: ${e.message}")
+            diagnosticStatus.text = "خطأ في الفحص"
+            setDiagnosticDot(ColorPalette.ERROR)
+        }
+    }
+
+    private fun setDiagnosticDot(color: String) {
+        val dot = GradientDrawable()
+        dot.shape = GradientDrawable.OVAL
+        dot.setColor(color.parseColorSafe())
+        diagnosticIndicator.background = dot
     }
 
     private fun buildBottomNav(): View {
