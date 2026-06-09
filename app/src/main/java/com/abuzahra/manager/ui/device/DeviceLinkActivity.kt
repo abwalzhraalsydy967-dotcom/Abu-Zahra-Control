@@ -125,7 +125,7 @@ class DeviceLinkActivity : AppCompatActivity() {
                 setTypeface(android.graphics.Typeface.MONOSPACE)
                 gravity = Gravity.CENTER
                 letterSpacing = 0.2f
-                setBackgroundColor(ColorPalette.SURFACE.parseColorSafe())
+                setBackgroundColor(ColorPalette.BG_INPUT.parseColorSafe())
                 setPadding(dp(24), dp(24), dp(24), dp(24))
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
