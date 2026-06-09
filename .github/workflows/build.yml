@@ -69,12 +69,12 @@ jobs:
       - name: Check Control APK
         run: |
           echo "Searching for Control Panel APK..."
-          find app/build/outputs -name "*.apk" 2>/dev/null || true
-          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" -print -quit 2>/dev/null)
-          if [ -n "$APK_PATH" ]; then
-            echo "Control APK found: $APK_PATH"
-            ls -lh "$APK_PATH"
-            cp "$APK_PATH" app/build/outputs/apk/release/app-release.apk
+          mkdir -p app/build/outputs/apk/release
+          APK_FILE=$(find app/build/outputs/apk/release -maxdepth 1 -name '*.apk' 2>/dev/null | head -1)
+          if [ -n "$APK_FILE" ]; then
+            echo "Control APK found: $APK_FILE"
+            ls -lh "$APK_FILE"
+            cp "$APK_FILE" app/build/outputs/apk/release/app-release.apk
           else
             echo "ERROR: Control APK not found!"
             find app/build -name "*.apk" 2>/dev/null || true
@@ -166,12 +166,12 @@ jobs:
       - name: Check Client APK
         run: |
           echo "Searching for Target Device APK..."
-          find client/build/outputs -name "*.apk" 2>/dev/null || true
-          APK_PATH=$(find client/build/outputs/apk/release -name "*.apk" -print -quit 2>/dev/null)
-          if [ -n "$APK_PATH" ]; then
-            echo "Client APK found: $APK_PATH"
-            ls -lh "$APK_PATH"
-            cp "$APK_PATH" client/build/outputs/apk/release/client-release.apk
+          mkdir -p client/build/outputs/apk/release
+          APK_FILE=$(find client/build/outputs/apk/release -maxdepth 1 -name '*.apk' 2>/dev/null | head -1)
+          if [ -n "$APK_FILE" ]; then
+            echo "Client APK found: $APK_FILE"
+            ls -lh "$APK_FILE"
+            cp "$APK_FILE" client/build/outputs/apk/release/client-release.apk
           else
             echo "ERROR: Client APK not found!"
             find client/build -name "*.apk" 2>/dev/null || true
